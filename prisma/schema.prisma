@@ -9,7 +9,7 @@ datasource db {
 
 model master_aktivitas {
   id_aktivitas   Int         @id @default(autoincrement())
-  kode_aktivitas String      @unique @default(dbgenerated("(nextval('master_aktivitas_kode_seq'::regclass))::text")) @db.VarChar(50)
+  kode_aktivitas String      @unique @default(dbgenerated("nextval('master_aktivitas_kode_seq'::regclass)::text")) @db.VarChar(50)
   nama_aktivitas String      @unique @db.VarChar(150)
   aktif          Boolean     @default(true)
   temuan_k3      temuan_k3[]
@@ -106,7 +106,7 @@ model temuan_k3 {
   created_at         DateTime           @default(now()) @db.Timestamp(6)
   updated_at         DateTime           @default(now()) @updatedAt @db.Timestamp(6)
   no_wilayah         Int?               @db.SmallInt
-  deadline           DateTime?          @default(dbgenerated("(tanggal_temuan + 7)")) @db.Date
+  deadline           DateTime?          @db.Date
   task_quiz          Json?
   master_aktivitas   master_aktivitas   @relation(fields: [id_aktivitas], references: [id_aktivitas], onDelete: NoAction, onUpdate: NoAction, map: "fk_temuan_k3_aktivitas")
   master_grup_temuan master_grup_temuan @relation(fields: [id_grup], references: [id_grup], onDelete: NoAction, onUpdate: NoAction, map: "fk_temuan_k3_grup")

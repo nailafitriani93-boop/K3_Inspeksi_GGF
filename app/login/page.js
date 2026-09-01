@@ -175,7 +175,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="login-page">
+    <main className="login-page" suppressHydrationWarning>
 
       {/* =====================================================
           BACKGROUND
@@ -297,6 +297,8 @@ export default function LoginPage() {
           <form
             onSubmit={handleLogin}
             className="login-form"
+            suppressHydrationWarning
+            autoComplete="off"
           >
 
             {/* USERNAME */}
