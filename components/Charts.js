@@ -1,0 +1,5 @@
+ "use client";
+import { PieChart,Pie,Cell,Tooltip,ResponsiveContainer,BarChart,Bar,XAxis,YAxis,CartesianGrid,Legend } from "recharts";
+export function StatusPie({data}){return <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>{data.map((x,i)=><Cell key={i}/>)}</Pie><Tooltip/><Legend/></PieChart></ResponsiveContainer>}
+export function MonthlyBar({data}){return <ResponsiveContainer width="100%" height="100%"><BarChart data={data}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="bulan"/><YAxis allowDecimals={false}/><Tooltip/><Legend/><Bar dataKey="open" stackId="a" name="Open"/><Bar dataKey="close" stackId="a" name="Close"/></BarChart></ResponsiveContainer>}
+export function WilayahBar({data}){return <ResponsiveContainer width="100%" height="100%"><BarChart data={data}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="nama_wilayah"/><YAxis allowDecimals={false}/><Tooltip/><Legend/><Bar dataKey="open" stackId="a" name="Open" fill="#d64545"/><Bar dataKey="close" stackId="a" name="Close" fill="#2f9e63"/></BarChart></ResponsiveContainer>}

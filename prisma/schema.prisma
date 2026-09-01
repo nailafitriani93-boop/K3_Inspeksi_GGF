@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model master_aktivitas {
+  id_aktivitas   Int         @id @default(autoincrement())
+  kode_aktivitas String      @unique @default(dbgenerated("(nextval('master_aktivitas_kode_seq'::regclass))::text")) @db.VarChar(50)
+  nama_aktivitas String      @unique @db.VarChar(150)
+  aktif          Boolean     @default(true)
+  temuan_k3      temuan_k3[]
+
+  @@index([aktif], map: "idx_master_aktivitas_aktif")
+}
+
+model master_grup_temuan {
+  id_grup   Int         @id @default(autoincrement())
+  kode_grup String      @unique @db.VarChar(50)
+  nama_grup String      @unique @db.VarChar(100)
+  aktif     Boolean     @default(true)
+  temuan_k3 temuan_k3[]
+
+  @@index([aktif], map: "idx_master_grup_temuan_aktif")
+}
+
+model master_wilayah {
+  id_wilayah    Int             @id
+  no_wilayah    Int             @unique @db.SmallInt
+  nama_wilayah  String          @unique @db.VarChar(100)
+  aktif         Boolean         @default(true)
+  master_lokasi master_lokasi[]
+  master_pic    master_pic[]
+  temuan_k3     temuan_k3[]
+}
+
+model master_lokasi {
+  id_lokasi                Int            @id
+  nama_lokasi              String         @db.VarChar(150)
+  plantation_code          String?        @db.VarChar(50)
+  jenis_tanaman            String?        @db.VarChar(100)
+  luas_bruto               Decimal?       @db.Decimal(12, 2)
+  luas_aktif_tanaman       Decimal?       @db.Decimal(12, 2)
+  luas_netto               Decimal?       @db.Decimal(12, 2)
+  status_lokasi            String?        @db.VarChar(100)
+  tanggal_perubahan_status DateTime?      @db.Date
+  tanggal_mulai_perawatan  DateTime?      @db.Date
+  tanggal_mulai_tanam      DateTime?      @db.Date
+  deskripsi                String?
+  kode_bibit_lokasi        String?        @db.VarChar(100)
+  umur_bulan               Decimal?       @db.Decimal(10, 2)
+  umur_hari                Decimal?       @db.Decimal(10, 2)
+  wilayah_id               Int
+  sumber_data              String?        @db.VarChar(100)
+  aktif                    Boolean        @default(true)
+  master_wilayah           master_wilayah @relation(fields: [wilayah_id], references: [id_wilayah], map: "fk_lokasi_wilayah")
+  temuan_k3                temuan_k3[]
+
+  @@unique([id_lokasi, wilayah_id], map: "uq_master_lokasi_id_wilayah")
+  @@index([wilayah_id], map: "idx_lokasi_wilayah")
+  @@index([aktif], map: "idx_master_lokasi_aktif")
+  @@index([wilayah_id], map: "idx_master_lokasi_wilayah")
+}
+
+model master_mandor {
+  id_mandor   Int         @id
+  nama_mandor String      @db.VarChar(200)
+  aktif       Boolean     @default(true)
+  temuan_k3   temuan_k3[]
+
+  @@index([aktif], map: "idx_master_mandor_aktif")
+}
+
+model master_pic {
+  id_pic         Int            @id
+  nama_pic       String         @db.VarChar(200)
+  no_hp          String?        @db.VarChar(30)
+  email          String?        @db.VarChar(200)
+  jabatan        String?        @db.VarChar(150)
+  aktif          Boolean        @default(true)
+  wilayah_id     Int
+  master_wilayah master_wilayah @relation(fields: [wilayah_id], references: [id_wilayah], map: "fk_pic_wilayah")
+
+  @@index([wilayah_id], map: "idx_pic_wilayah")
+}
+
+model temuan_k3 {
+  id_temuan          BigInt             @id @default(autoincrement())
+  tanggal_temuan     DateTime           @db.Date
+  id_wilayah         Int
+  id_lokasi          Int
+  id_mandor          Int
+  id_aktivitas       Int
+  id_grup            Int
+  deskripsi          String
+  latitude           Decimal?           @db.Decimal(10, 7)
+  longitude          Decimal?           @db.Decimal(10, 7)
+  foto_url           String?            @db.VarChar(500)
+  status_temuan      String             @default("OPEN") @db.VarChar(10)
+  closed_at          DateTime?          @db.Timestamp(6)
+  closed_by          String?            @db.VarChar(150)
+  foto_close_url     String?            @db.VarChar(500)
+  created_at         DateTime           @default(now()) @db.Timestamp(6)
+  updated_at         DateTime           @default(now()) @updatedAt @db.Timestamp(6)
+  no_wilayah         Int?               @db.SmallInt
+  deadline           DateTime?          @default(dbgenerated("(tanggal_temuan + 7)")) @db.Date
+  task_quiz          Json?
+  master_aktivitas   master_aktivitas   @relation(fields: [id_aktivitas], references: [id_aktivitas], onDelete: NoAction, onUpdate: NoAction, map: "fk_temuan_k3_aktivitas")
+  master_grup_temuan master_grup_temuan @relation(fields: [id_grup], references: [id_grup], onDelete: NoAction, onUpdate: NoAction, map: "fk_temuan_k3_grup")
+  master_lokasi      master_lokasi      @relation(fields: [id_lokasi, id_wilayah], references: [id_lokasi, wilayah_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_temuan_k3_lokasi_wilayah")
+  master_mandor      master_mandor      @relation(fields: [id_mandor], references: [id_mandor], onDelete: NoAction, onUpdate: NoAction, map: "fk_temuan_k3_mandor")
+  master_wilayah     master_wilayah     @relation(fields: [id_wilayah], references: [id_wilayah], onDelete: NoAction, onUpdate: NoAction, map: "fk_temuan_k3_wilayah")
+
+  @@index([id_aktivitas], map: "idx_temuan_aktivitas")
+  @@index([id_grup], map: "idx_temuan_grup")
+  @@index([id_lokasi], map: "idx_temuan_lokasi")
+  @@index([id_mandor], map: "idx_temuan_mandor")
+  @@index([status_temuan], map: "idx_temuan_status")
+  @@index([status_temuan, tanggal_temuan], map: "idx_temuan_status_tanggal")
+  @@index([tanggal_temuan], map: "idx_temuan_tanggal")
+  @@index([id_wilayah], map: "idx_temuan_wilayah")
+}
+
+model users {
+  id_user      Int      @id @default(autoincrement())
+  username     String   @unique @db.VarChar(100)
+  password     String   @db.VarChar(255)
+  nama_lengkap String   @db.VarChar(200)
+  role         String   @default("KASI") @db.VarChar(20)
+  aktif        Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([aktif], map: "idx_users_aktif")
+  @@index([role], map: "idx_users_role")
+}
