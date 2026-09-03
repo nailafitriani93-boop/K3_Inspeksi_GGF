@@ -120,23 +120,11 @@ export default function Inspeksi() {
     try {
       setLoggingOut(true);
 
-      /*
-       * Logout ke server.
-       *
-       * Pastikan endpoint:
-       * /api/auth/logout
-       *
-       * menghapus cookie/session login.
-       */
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });
     } catch {
-      /*
-       * Walaupun request logout gagal,
-       * user tetap diarahkan ke login.
-       */
     } finally {
       try {
         localStorage.removeItem(DRAFT_KEY);
@@ -148,26 +136,6 @@ export default function Inspeksi() {
 
       window.location.replace("/login");
     }
-  }
-
-  /* =====================================================
-     POPUP PERBAIKAN
-  ===================================================== */
-
-  const [showMaintenancePopup, setShowMaintenancePopup] =
-    useState(false);
-
-  const [maintenancePage, setMaintenancePage] =
-    useState("");
-
-  function bukaPopupPerbaikan(page) {
-    setMaintenancePage(page);
-    setShowMaintenancePopup(true);
-  }
-
-  function tutupPopupPerbaikan() {
-    setShowMaintenancePopup(false);
-    setMaintenancePage("");
   }
 
   function set(k, v) {
@@ -799,27 +767,19 @@ export default function Inspeksi() {
             Form Inspeksi
           </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/dashboard"
             className="nav-maintenance"
-            onClick={() =>
-              bukaPopupPerbaikan("Dashboard")
-            }
           >
             Dashboard
-          </button>
+          </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/temuan"
             className="nav-maintenance"
-            onClick={() =>
-              bukaPopupPerbaikan("Data Temuan")
-            }
           >
             Data Temuan
-          </button>
-
-          {/* LOGOUT */}
+          </Link>
 
           <button
             type="button"
@@ -835,7 +795,6 @@ export default function Inspeksi() {
         </nav>
 
       </header>
-
 
       <div className="main">
 
@@ -866,7 +825,6 @@ export default function Inspeksi() {
           </div>
 
         </section>
-
 
         {/* =====================================================
             MESSAGE
@@ -899,7 +857,6 @@ export default function Inspeksi() {
 
           </div>
         )}
-
 
         {/* =====================================================
             FORM
@@ -946,7 +903,6 @@ export default function Inspeksi() {
 
             </div>
 
-
             {/* MANDOR */}
 
             {cfg.map(
@@ -977,7 +933,6 @@ export default function Inspeksi() {
               )
             )}
 
-
             {/* WILAYAH */}
 
             <SearchSelect
@@ -1002,7 +957,6 @@ export default function Inspeksi() {
                   : "Cari wilayah 1-7..."
               }
             />
-
 
             {/* LOKASI */}
 
@@ -1035,7 +989,6 @@ export default function Inspeksi() {
               }
             />
 
-
             {/* JUMLAH LOKASI */}
 
             {f.no_wilayah &&
@@ -1060,7 +1013,6 @@ export default function Inspeksi() {
                 </div>
 
               )}
-
 
             {/* AKTIVITAS */}
 
@@ -1120,7 +1072,6 @@ export default function Inspeksi() {
                 </button>
 
               </div>
-
 
               {showAktivitasTambah && (
 
@@ -1186,7 +1137,6 @@ export default function Inspeksi() {
 
             </div>
 
-
             {/* GRUP TEMUAN */}
 
             <SearchSelect
@@ -1207,7 +1157,6 @@ export default function Inspeksi() {
               labelKey="nama_grup"
               placeholder="Cari grup temuan..."
             />
-
 
             {/* TASK */}
 
@@ -1240,7 +1189,6 @@ export default function Inspeksi() {
                 </button>
 
               </div>
-
 
               {taskQuiz.map(
                 (t, i) => (
@@ -1318,7 +1266,6 @@ export default function Inspeksi() {
 
             </div>
 
-
             {/* DESKRIPSI */}
 
             <div className="field full">
@@ -1344,7 +1291,6 @@ export default function Inspeksi() {
 
             </div>
 
-
             {/* GPS */}
 
             <div className="field">
@@ -1363,7 +1309,6 @@ export default function Inspeksi() {
 
             </div>
 
-
             <div className="field">
 
               <label>
@@ -1379,7 +1324,6 @@ export default function Inspeksi() {
               />
 
             </div>
-
 
             {/* MAPS */}
 
@@ -1466,7 +1410,6 @@ export default function Inspeksi() {
               )}
 
             </div>
-
 
             {/* FOTO */}
 
@@ -1565,7 +1508,6 @@ export default function Inspeksi() {
 
           </div>
 
-
           {/* =====================================================
               SUBMIT
           ===================================================== */}
@@ -1612,7 +1554,6 @@ export default function Inspeksi() {
 
         </form>
 
-
         {/* =====================================================
             NAVIGASI BAWAH
         ===================================================== */}
@@ -1631,113 +1572,25 @@ export default function Inspeksi() {
 
           <div className="navigation-links">
 
-            <button
-              type="button"
+            <Link
+              href="/dashboard"
               className="btn secondary"
-              onClick={() =>
-                bukaPopupPerbaikan("Dashboard")
-              }
             >
               Dashboard
-            </button>
+            </Link>
 
-            <button
-              type="button"
+            <Link
+              href="/temuan"
               className="btn"
-              onClick={() =>
-                bukaPopupPerbaikan("Data Temuan")
-              }
             >
               Data Temuan →
-            </button>
+            </Link>
 
           </div>
 
         </div>
 
       </div>
-
-
-      {/* =====================================================
-          POPUP PERBAIKAN
-      ===================================================== */}
-
-      {showMaintenancePopup && (
-
-        <div
-          className="maintenance-overlay"
-          onMouseDown={(e) => {
-
-            if (
-              e.target ===
-              e.currentTarget
-            ) {
-              tutupPopupPerbaikan();
-            }
-
-          }}
-        >
-
-          <div
-            className="maintenance-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="maintenance-title"
-          >
-
-            <button
-              type="button"
-              className="maintenance-close"
-              onClick={
-                tutupPopupPerbaikan
-              }
-              aria-label="Tutup"
-            >
-              ×
-            </button>
-
-            <div className="maintenance-line" />
-
-            <div className="maintenance-content">
-
-              <span className="maintenance-label">
-                PEMBERITAHUAN
-              </span>
-
-              <h2 id="maintenance-title">
-                {maintenancePage}
-              </h2>
-
-              <p>
-                Halaman ini sedang dalam
-                proses perbaikan dan
-                penyempurnaan.
-              </p>
-
-              <p className="maintenance-note">
-                Silakan kembali menggunakan
-                Form Inspeksi K3 untuk
-                melakukan input data temuan.
-              </p>
-
-              <button
-                type="button"
-                className="btn maintenance-button"
-                onClick={
-                  tutupPopupPerbaikan
-                }
-              >
-                Kembali ke Form
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      )}
-
 
       {/* =====================================================
           STYLE
@@ -1795,53 +1648,48 @@ export default function Inspeksi() {
 
         body {
           font-family:
-            'Inter',
-            system-ui,
-            -apple-system,
-            BlinkMacSystemFont,
-            'Segoe UI',
+            "Inter",
+            Arial,
             sans-serif;
-
-          color:
-            var(--text);
+          color: var(--text);
         }
 
         button,
         input,
-        select,
-        textarea {
-          font-family: inherit;
+        textarea,
+        select {
+          font: inherit;
+        }
+
+        button {
+          cursor: pointer;
         }
 
         .shell {
           min-height: 100vh;
-
-          padding-top: 74px;
-
+          padding-top: 78px;
           background:
             linear-gradient(
               180deg,
-              #f8faf8 0%,
-              #f2f6f3 45%,
-              #eef4f0 100%
+              #f6f8f6 0%,
+              #edf3ee 100%
             );
-
-          color:
-            var(--text);
-
-          overflow-x: hidden;
         }
 
+        /* =====================================================
+           TOPBAR
+        ===================================================== */
+
         .topbar {
-          position: fixed !important;
+          position: fixed;
 
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
+          top: 0;
+          left: 0;
+          right: 0;
 
-          width: 100% !important;
+          z-index: 1000;
 
-          z-index: 99999 !important;
+          min-height: 78px;
 
           display: flex;
 
@@ -1849,148 +1697,148 @@ export default function Inspeksi() {
 
           justify-content: space-between;
 
-          min-height: 74px;
+          gap: 20px;
 
           padding:
-            8px
-            clamp(18px, 4vw, 64px);
-
-          gap: 25px;
+            10px
+            clamp(18px, 4vw, 54px);
 
           background:
-            rgba(255, 255, 255, .97);
+            rgba(255, 255, 255, .96);
 
           border-bottom:
-            1px solid rgba(20, 55, 33, .08);
-
-          box-shadow:
-            0 3px 18px rgba(20, 45, 29, .08);
+            1px solid #e3eae5;
 
           backdrop-filter:
-            blur(14px);
+            blur(12px);
 
           -webkit-backdrop-filter:
-            blur(14px);
-
-          transform:
-            translateZ(0);
-
-          isolation:
-            isolate;
+            blur(12px);
         }
 
         .brand {
           display: flex;
+
           align-items: center;
-          min-width: 0;
+
           gap: 12px;
-          flex: 1;
+
+          min-width: 0;
         }
 
         .brand-logo-link {
           display: flex;
+
           align-items: center;
-          justify-content: center;
+
           text-decoration: none;
-          flex-shrink: 0;
         }
 
         .logo {
-          width: 108px;
-          height: 54px;
+          width: 110px;
+
+          height: 52px;
+
+          flex:
+            0 0 110px;
+
           display: flex;
+
           align-items: center;
+
           justify-content: center;
+
           overflow: hidden;
-          background: transparent;
         }
 
         .logo img {
+          display: block;
+
           width: 100%;
-          height: 100%;
-          max-width: 108px;
+
+          max-width: 110px;
+
+          height: auto;
+
           object-fit: contain;
         }
 
         .brand-text {
           display: flex;
+
           flex-direction: column;
-          gap: 3px;
-          min-width: 0;
+
+          gap: 2px;
+
+          line-height: 1.2;
         }
 
         .brand-text b {
-          color: #142119;
+          color: var(--green-900);
+
           font-size: 15px;
-          line-height: 1.2;
+
           font-weight: 800;
-          white-space: nowrap;
         }
 
         .brand-text span {
-          color: #87918a;
-          font-size: 12px;
-          line-height: 1.2;
-          white-space: nowrap;
+          color: var(--text-muted);
+
+          font-size: 11px;
+
+          font-weight: 600;
         }
 
         .nav {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: flex-end;
-          gap: 5px !important;
-          flex-shrink: 0 !important;
+          display: flex;
+
+          align-items: center;
+
+          gap: 7px;
         }
 
         .nav a,
         .nav-maintenance,
+        .nav-login,
         .nav-logout {
           position: relative;
 
-          display: inline-flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          white-space: nowrap !important;
-
-          text-decoration: none;
-
-          color: #34453a;
-
-          padding:
-            10px
-            14px;
+          border: 0;
 
           border-radius: 10px;
 
-          font-size: 13px;
+          padding:
+            10px
+            13px;
+
+          background: transparent;
+
+          color: #5f6c64;
+
+          font-size: 12px;
 
           font-weight: 700;
 
-          transition:
-            color .18s ease,
-            background .18s ease,
-            transform .18s ease;
-        }
+          text-decoration: none;
 
-        .nav-maintenance {
-          border: 0;
-          background: transparent;
-          cursor: pointer;
+          white-space: nowrap;
+
+          transition:
+            background .16s ease,
+            color .16s ease,
+            transform .16s ease;
         }
 
         .nav a:hover,
-        .nav-maintenance:hover {
-          color: var(--green-700);
-          background: #f0f7f2;
-          transform: translateY(-1px);
+        .nav-maintenance:hover,
+        .nav-login:hover {
+          background: #f1f6f2;
+
+          color: var(--green-800);
         }
 
         .nav a.active {
           color: var(--green-700);
-          background: #edf7f0;
         }
 
         .nav a.active::after {
@@ -1998,92 +1846,81 @@ export default function Inspeksi() {
 
           position: absolute;
 
-          left: 14px;
-          right: 14px;
+          left: 13px;
+          right: 13px;
           bottom: 4px;
 
           height: 2px;
 
           border-radius: 999px;
 
-          background:
-            var(--green-600);
+          background: var(--green-700);
         }
 
-        /* =====================================================
-           LOGOUT
-        ===================================================== */
-
         .nav-logout {
-          border: 1px solid #d9e3dc;
+          color: #a12d2d;
 
-          color: #a12d2d !important;
-
-          background: #fff5f5;
-
-          cursor: pointer;
-
-          box-shadow: none;
+          background: #fff6f6;
         }
 
         .nav-logout:hover {
-          color: #8f2222 !important;
-
-          background: #ffe9e9;
-
-          border-color: #efcccc;
-
-          transform: translateY(-1px);
+          background: #ffecec;
         }
 
         .nav-logout:disabled {
+          opacity: .65;
+
           cursor: not-allowed;
-
-          opacity: .6;
-
-          transform: none;
         }
+
+        /* =====================================================
+           MAIN
+        ===================================================== */
 
         .main {
-          width: 100%;
-          max-width: 1180px;
+          width: min(
+            1180px,
+            calc(100% - 36px)
+          );
+
           margin: 0 auto;
-          padding: 28px 24px 50px;
+
+          padding:
+            28px 0 50px;
         }
+
+        /* =====================================================
+           HERO
+        ===================================================== */
 
         .hero {
           position: relative;
 
-          display: flex !important;
-
-          align-items: center !important;
-
-          justify-content: flex-start !important;
-
-          width: 100%;
-
           min-height: 260px;
 
-          padding: 48px 54px;
+          display: flex;
 
-          border-radius: 26px;
+          align-items: center;
 
           overflow: hidden;
 
+          padding:
+            45px
+            clamp(30px, 6vw, 64px);
+
+          border-radius: 26px;
+
           background:
             linear-gradient(
-              115deg,
-              #dff2e5 0%,
-              #edf8f0 48%,
-              #f7faf7 100%
+              135deg,
+              #0b6e36 0%,
+              #079447 52%,
+              #16a957 100%
             );
 
-          border:
-            1px solid
-            rgba(8, 120, 61, .08);
-
           box-shadow:
-            var(--shadow);
+            0 18px 50px
+            rgba(10, 100, 49, .18);
         }
 
         .hero::before {
@@ -2091,16 +1928,18 @@ export default function Inspeksi() {
 
           position: absolute;
 
-          width: 360px;
-          height: 360px;
+          width: 330px;
 
-          right: -130px;
-          top: -170px;
+          height: 330px;
+
+          right: -120px;
+
+          top: -140px;
 
           border-radius: 50%;
 
           background:
-            rgba(24, 169, 87, .12);
+            rgba(255, 255, 255, .08);
         }
 
         .hero::after {
@@ -2109,83 +1948,88 @@ export default function Inspeksi() {
           position: absolute;
 
           width: 230px;
+
           height: 230px;
 
-          right: 100px;
-          bottom: -170px;
+          right: 8%;
+
+          bottom: -150px;
 
           border-radius: 50%;
 
           background:
-            rgba(8, 120, 61, .07);
+            rgba(255, 255, 255, .06);
         }
 
         .hero-decoration {
           position: absolute;
+
           border-radius: 50%;
-          pointer-events: none;
+
+          background:
+            rgba(255, 255, 255, .08);
         }
 
         .hero-decoration-one {
-          width: 80px;
-          height: 80px;
-          right: 150px;
+          width: 70px;
+
+          height: 70px;
+
+          right: 28%;
+
           top: 30px;
-          border: 1px solid rgba(8, 120, 61, .12);
         }
 
         .hero-decoration-two {
-          width: 18px;
-          height: 18px;
-          right: 270px;
-          bottom: 48px;
-          background: rgba(8, 120, 61, .15);
+          width: 28px;
+
+          height: 28px;
+
+          right: 15%;
+
+          bottom: 46px;
         }
 
         .hero-content-left {
           position: relative;
-          width: 100%;
-          max-width: 900px;
-          text-align: left !important;
+
           z-index: 2;
         }
 
-        .hero .eyebrow {
+        .eyebrow {
           display: inline-flex;
+
           align-items: center;
 
-          padding: 7px 13px;
+          margin-bottom: 12px;
 
-          margin-bottom: 14px;
+          padding:
+            7px
+            12px;
 
           border-radius: 999px;
 
-          background: rgba(255, 255, 255, .78);
+          background:
+            rgba(255, 255, 255, .14);
 
-          border: 1px solid rgba(8, 120, 61, .12);
+          color: #e9fff1;
 
-          color: var(--green-700);
-
-          font-size: 11px;
+          font-size: 10px;
 
           font-weight: 800;
 
-          letter-spacing: .09em;
+          letter-spacing: .12em;
         }
 
         .hero .title {
-          margin: 0 !important;
+          margin: 0;
 
-          color: var(--green-900);
-
-          text-align: left !important;
-
-          white-space: normal !important;
+          color: #ffffff;
 
           font-size:
-            clamp(42px, 5vw, 64px);
+            clamp(42px, 6vw, 64px);
 
-          line-height: 1.02;
+          line-height: 1;
 
           font-weight: 800;
 
@@ -2193,62 +2037,59 @@ export default function Inspeksi() {
         }
 
         .hero-subtitle {
-          margin: 14px 0 0 !important;
+          margin:
+            14px 0 0;
 
-          color: #567060;
+          color:
+            rgba(255, 255, 255, .85);
 
-          font-size: 16px;
-
-          line-height: 1.5;
+          font-size: 15px;
 
           font-weight: 500;
-
-          font-style: italic;
         }
+
+        /* =====================================================
+           MESSAGE
+        ===================================================== */
 
         .notice,
         .error {
-          width: 100%;
+          margin-top: 16px;
 
           display: flex;
 
-          align-items: center;
+          align-items: flex-start;
 
           gap: 10px;
 
-          margin-top: 18px;
+          padding:
+            13px
+            16px;
 
-          padding: 13px 16px;
-
-          border-radius: 14px;
+          border-radius: 13px;
 
           font-size: 13px;
 
           line-height: 1.5;
-
-          box-shadow: var(--shadow-sm);
         }
 
         .notice {
-          background: #eef9f1;
-          border: 1px solid #d8efdd;
-          color: #167341;
+          background: #eefaf2;
+
+          border:
+            1px solid #cfe9d7;
+
+          color: #166b39;
         }
 
-        .error {
-          background: var(--danger-bg);
-          border: 1px solid #f4d2d2;
-          color: var(--danger-text);
-        }
+        .notice-icon {
+          width: 22px;
 
-        .notice-icon,
-        .error-icon {
-          width: 24px;
-          height: 24px;
+          height: 22px;
 
-          flex: 0 0 24px;
+          flex: 0 0 22px;
 
-          display: inline-flex;
+          display: flex;
 
           align-items: center;
 
@@ -2256,35 +2097,60 @@ export default function Inspeksi() {
 
           border-radius: 50%;
 
+          background: #d5f1df;
+
           font-weight: 800;
         }
 
-        .notice-icon {
-          background: #d6efdc;
-          color: #167341;
+        .error {
+          background: var(--danger-bg);
+
+          border:
+            1px solid #f1caca;
+
+          color: var(--danger-text);
         }
 
         .error-icon {
-          background: #f8dada;
-          color: #a52c2c;
+          width: 22px;
+
+          height: 22px;
+
+          flex: 0 0 22px;
+
+          display: flex;
+
+          align-items: center;
+
+          justify-content: center;
+
+          border-radius: 50%;
+
+          background: #ffdcdc;
+
+          font-weight: 800;
         }
 
-        .card {
-          width: 100%;
+        /* =====================================================
+           CARD
+        ===================================================== */
 
+        .card {
           margin-top: 18px;
 
-          padding: 30px;
+          padding:
+            clamp(22px, 4vw, 34px);
 
-          border-radius: 24px;
+          border:
+            1px solid #e0e8e2;
 
-          background: rgba(255, 255, 255, .98);
+          border-radius: 22px;
 
-          border: 1px solid var(--border);
+          background:
+            rgba(255, 255, 255, .95);
 
-          box-shadow: var(--shadow-lg);
-
-          overflow: hidden;
+          box-shadow:
+            var(--shadow);
         }
 
         .form-section-title {
@@ -2294,27 +2160,27 @@ export default function Inspeksi() {
 
           gap: 10px;
 
-          margin: 0 0 24px;
+          margin-bottom: 24px;
 
           color: var(--green-800);
 
-          font-size: 13px;
+          font-size: 12px;
 
           font-weight: 800;
 
-          text-transform: uppercase;
-
           letter-spacing: .06em;
+
+          text-transform: uppercase;
         }
 
         .section-line {
-          width: 28px;
+          width: 34px;
+
           height: 3px;
 
           border-radius: 999px;
 
-          background:
-            var(--green-600);
+          background: var(--green-700);
         }
 
         .formgrid {
@@ -2323,7 +2189,7 @@ export default function Inspeksi() {
           grid-template-columns:
             repeat(2, minmax(0, 1fr));
 
-          gap: 20px;
+          gap: 19px;
         }
 
         .field {
@@ -2337,18 +2203,13 @@ export default function Inspeksi() {
         .field label {
           display: block;
 
-          margin-bottom: 8px;
+          margin-bottom: 7px;
 
-          color: #33443a;
+          color: #34443a;
 
-          font-size: 14px;
+          font-size: 12px;
 
           font-weight: 700;
-        }
-
-        .required-mark {
-          margin-left: 3px;
-          color: #c52e2e;
         }
 
         input,
@@ -2356,225 +2217,154 @@ export default function Inspeksi() {
         textarea {
           width: 100%;
 
-          max-width: 100%;
-
-          border: 1px solid var(--border-dark);
+          border:
+            1px solid var(--border);
 
           border-radius: 11px;
 
-          padding: 12px 14px;
+          outline: none;
 
           background: #ffffff;
 
-          color: #1e2a22;
+          color: var(--text);
 
-          font-family: inherit;
+          padding:
+            11px
+            13px;
 
-          font-size: 14px;
-
-          outline: none;
+          font-size: 13px;
 
           transition:
-            border-color .18s ease,
-            box-shadow .18s ease,
-            background .18s ease;
+            border-color .16s ease,
+            box-shadow .16s ease;
         }
 
-        input::placeholder,
-        textarea::placeholder {
-          color: #a1aaa4;
-        }
+        textarea {
+          resize: vertical;
 
-        input:hover,
-        select:hover,
-        textarea:hover {
-          border-color: #b9c8bc;
+          min-height: 120px;
         }
 
         input:focus,
         select:focus,
         textarea:focus {
-          border-color: var(--green-600);
-
-          background: #ffffff;
+          border-color:
+            rgba(7, 148, 71, .65);
 
           box-shadow:
             0 0 0 3px
-            rgba(8, 148, 71, .10);
-        }
-
-        input:read-only {
-          background: #f7f9f7;
-          color: #536158;
-        }
-
-        textarea {
-          resize: vertical;
-          min-height: 130px;
-          line-height: 1.6;
+            rgba(7, 148, 71, .09);
         }
 
         .selectrow {
           display: flex;
-          align-items: stretch;
-          gap: 8px;
-          min-width: 0;
-        }
 
-        .selectrow > * {
-          min-width: 0;
+          align-items: center;
+
+          gap: 8px;
         }
 
         .selectrow > :first-child {
-          flex: 1;
-        }
+          flex: 1 1 auto;
 
-        .muted {
-          color: var(--text-muted);
-          opacity: 1;
-        }
-
-        .small {
-          font-size: 12px;
-        }
-
-        .location-count {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          color: #7a877f;
-          font-size: 12px;
-        }
-
-        .location-dot {
-          color: var(--green-600);
-          font-size: 10px;
+          min-width: 0;
         }
 
         .btn {
-          border: 0;
-
-          border-radius: 10px;
-
-          padding: 11px 16px;
-
-          background: var(--green-700);
-
-          color: #ffffff;
-
-          font-family: inherit;
-
-          font-size: 13px;
-
-          font-weight: 700;
-
-          cursor: pointer;
-
-          text-decoration: none;
-
           display: inline-flex;
 
           align-items: center;
 
           justify-content: center;
 
-          gap: 7px;
+          min-height: 42px;
 
-          white-space: nowrap;
+          padding:
+            10px
+            15px;
 
-          box-shadow:
-            0 3px 8px
-            rgba(8, 120, 61, .12);
+          border: 0;
+
+          border-radius: 10px;
+
+          background: var(--green-700);
+
+          color: #ffffff;
+
+          font-size: 12px;
+
+          font-weight: 700;
+
+          text-decoration: none;
 
           transition:
             transform .16s ease,
-            box-shadow .16s ease,
             background .16s ease,
-            opacity .16s ease;
+            box-shadow .16s ease;
         }
 
         .btn:hover {
           background: var(--green-800);
 
-          transform: translateY(-1px);
-
-          box-shadow:
-            0 6px 14px
-            rgba(8, 120, 61, .16);
-        }
-
-        .btn:active {
           transform:
-            translateY(1px)
-            scale(.985);
+            translateY(-1px);
         }
 
         .btn:disabled {
+          opacity: .6;
+
           cursor: not-allowed;
-          opacity: .55;
+
           transform: none;
-          box-shadow: none;
+        }
+
+        .btn.secondary {
+          background: #f0f5f1;
+
+          color: #35513f;
+
+          border:
+            1px solid #dce6df;
+        }
+
+        .btn.secondary:hover {
+          background: #e6eee8;
+        }
+
+        .btn.danger {
+          background: #fff1f1;
+
+          color: #b13333;
+
+          border:
+            1px solid #f0d0d0;
+        }
+
+        .btn.danger:hover {
+          background: #ffe7e7;
         }
 
         .btn.small {
-          padding: 9px 12px;
-          font-size: 12px;
-        }
+          min-height: 36px;
 
-        .secondary {
-          background: #ffffff;
+          padding:
+            8px
+            11px;
 
-          color: #31513d;
-
-          border: 1px solid #d8e3db;
-
-          box-shadow: none;
-        }
-
-        .secondary:hover {
-          background: #f1f7f3;
-
-          color: var(--green-700);
-
-          border-color: #c8d9cd;
-
-          box-shadow: none;
-        }
-
-        .danger {
-          background: #fff0f0;
-
-          color: #a12d2d;
-
-          border: 1px solid #f0d1d1;
-
-          box-shadow: none;
-        }
-
-        .danger:hover {
-          background: #ffe3e3;
-
-          color: #8f2222;
-
-          box-shadow: none;
+          font-size: 11px;
         }
 
         .inlinebox {
           margin-top: 10px;
 
-          padding: 14px;
-
-          display: flex;
-
-          flex-direction: column;
-
-          gap: 10px;
+          padding: 12px;
 
           border-radius: 13px;
 
           background: #f7faf8;
 
-          border: 1px solid #dce8df;
+          border:
+            1px dashed #cbd9cf;
         }
 
         .actions {
@@ -2582,10 +2372,42 @@ export default function Inspeksi() {
 
           align-items: center;
 
-          gap: 9px;
+          gap: 8px;
 
           flex-wrap: wrap;
         }
+
+        .inlinebox .actions {
+          margin-top: 10px;
+        }
+
+        .location-count {
+          display: flex;
+
+          align-items: center;
+
+          gap: 8px;
+
+          padding:
+            10px
+            13px;
+
+          border-radius: 10px;
+
+          background: #f3f8f4;
+
+          color: #52665a;
+
+          font-size: 12px;
+        }
+
+        .location-dot {
+          color: var(--green-600);
+        }
+
+        /* =====================================================
+           TASK
+        ===================================================== */
 
         .taskhead {
           display: flex;
@@ -2596,39 +2418,53 @@ export default function Inspeksi() {
 
           gap: 15px;
 
-          margin-bottom: 12px;
+          margin-bottom: 10px;
+        }
+
+        .muted {
+          color: var(--text-muted);
+        }
+
+        .small {
+          font-size: 11px;
         }
 
         .taskrow {
           display: grid;
 
           grid-template-columns:
-            1.5fr
-            1fr
-            150px
+            minmax(0, 1fr)
+            minmax(0, 1fr)
+            130px
             auto;
 
           gap: 8px;
 
-          margin-bottom: 8px;
+          align-items: center;
 
-          padding: 8px;
+          margin-top: 8px;
+
+          padding: 9px;
 
           border-radius: 12px;
 
           background: #f8faf8;
 
-          border: 1px solid #e6ece7;
+          border:
+            1px solid #e6ece7;
         }
 
-        .mapbox {
-          width: 100%;
+        /* =====================================================
+           MAP
+        ===================================================== */
 
+        .mapbox {
           overflow: hidden;
 
-          border-radius: 15px;
+          border-radius: 14px;
 
-          border: 1px solid #d9e3dc;
+          border:
+            1px solid #dce5de;
 
           background: #f8faf8;
         }
@@ -2642,13 +2478,14 @@ export default function Inspeksi() {
 
           gap: 15px;
 
-          padding: 14px 15px;
+          padding:
+            13px
+            15px;
 
-          flex-wrap: wrap;
-        }
+          background: #f7faf8;
 
-        .coordinate-box {
-          min-width: 0;
+          border-bottom:
+            1px solid #e1e8e3;
         }
 
         .coordinate-box strong {
@@ -2656,7 +2493,7 @@ export default function Inspeksi() {
 
           margin-top: 3px;
 
-          color: #244a32;
+          color: var(--green-800);
 
           font-size: 13px;
         }
@@ -2666,37 +2503,36 @@ export default function Inspeksi() {
 
           width: 100%;
 
-          min-height: 360px;
+          min-height: 380px;
 
           border: 0;
-
-          background: #e9efea;
         }
 
         .gps-empty {
-          padding: 32px 20px;
-
-          border: 1px dashed #c8d7cc;
-
-          border-radius: 14px;
-
-          background: #f8fbf9;
-
-          text-align: center;
-
           display: flex;
-
-          flex-direction: column;
 
           align-items: center;
 
-          gap: 9px;
+          gap: 16px;
+
+          padding:
+            30px
+            22px;
+
+          border-radius: 14px;
+
+          border:
+            1px dashed #cbd8cf;
+
+          background: #f8faf8;
         }
 
         .gps-empty-icon {
-          width: 45px;
+          width: 52px;
 
-          height: 45px;
+          height: 52px;
+
+          flex: 0 0 52px;
 
           display: flex;
 
@@ -2704,51 +2540,63 @@ export default function Inspeksi() {
 
           justify-content: center;
 
-          border-radius: 50%;
+          border-radius: 14px;
 
-          background: #e6f4e9;
+          background: #e8f5eb;
 
           color: var(--green-700);
 
-          font-size: 10px;
+          font-size: 11px;
 
           font-weight: 800;
-
-          letter-spacing: .04em;
         }
 
         .gps-empty strong {
-          display: block;
-
-          color: #274331;
-
-          font-size: 14px;
+          color: var(--green-800);
         }
 
         .gps-empty p {
-          margin: 5px 0 10px;
+          margin:
+            4px 0 0;
 
-          color: #839087;
+          color: #78867d;
 
           font-size: 12px;
 
           line-height: 1.5;
         }
 
-        .photo-box {
-          padding: 15px;
+        .gps-empty .btn {
+          margin-left: auto;
 
-          border: 1px dashed #cbd8ce;
+          white-space: nowrap;
+        }
+
+        /* =====================================================
+           FOTO
+        ===================================================== */
+
+        .required-mark {
+          margin-left: 4px;
+
+          color: #cf3f3f;
+        }
+
+        .photo-box {
+          padding: 14px;
 
           border-radius: 14px;
 
-          background: #f9fbf9;
+          background: #f8faf8;
+
+          border:
+            1px dashed #cbd8cf;
         }
 
         .photoactions {
           display: flex;
 
-          gap: 9px;
+          gap: 8px;
 
           flex-wrap: wrap;
         }
@@ -2756,45 +2604,47 @@ export default function Inspeksi() {
         .photo-help {
           margin-top: 9px;
 
-          color: #8a958e;
+          color: var(--text-muted);
 
           font-size: 11px;
         }
 
         .fotopreview {
-          margin-top: 14px;
+          margin-top: 12px;
 
           display: flex;
 
           align-items: flex-start;
 
           gap: 12px;
-
-          flex-wrap: wrap;
         }
 
         .fotopreview img {
-          width: 220px;
+          width: 260px;
 
-          max-width: 100%;
+          max-width: 60%;
 
-          max-height: 300px;
+          max-height: 320px;
 
           object-fit: cover;
 
-          border-radius: 13px;
+          border-radius: 12px;
 
-          border: 1px solid #d9e3dc;
-
-          box-shadow: var(--shadow-sm);
+          border:
+            1px solid #dce5de;
         }
+
+        /* =====================================================
+           SUBMIT
+        ===================================================== */
 
         .submit-area {
           margin-top: 26px;
 
-          padding-top: 20px;
+          padding-top: 22px;
 
-          border-top: 1px solid #e6ece7;
+          border-top:
+            1px solid #e5ece6;
 
           display: flex;
 
@@ -2811,16 +2661,14 @@ export default function Inspeksi() {
           align-items: center;
 
           gap: 10px;
-
-          min-width: 0;
         }
 
         .submit-check {
-          width: 32px;
+          width: 34px;
 
-          height: 32px;
+          height: 34px;
 
-          flex: 0 0 32px;
+          flex: 0 0 34px;
 
           display: flex;
 
@@ -2830,48 +2678,34 @@ export default function Inspeksi() {
 
           border-radius: 50%;
 
-          background: #e7f5ea;
+          background: #e8f5eb;
 
           color: var(--green-700);
 
           font-weight: 800;
         }
 
-        .submit-info div {
-          display: flex;
-
-          flex-direction: column;
-
-          gap: 2px;
+        .submit-info strong,
+        .submit-info span {
+          display: block;
         }
 
         .submit-info strong {
-          color: #34463a;
+          color: var(--green-800);
+
           font-size: 12px;
         }
 
-        .submit-info span:not(.submit-check) {
-          color: #8b968f;
+        .submit-info span {
+          margin-top: 3px;
+
+          color: var(--text-muted);
 
           font-size: 11px;
-
-          line-height: 1.4;
-        }
-
-        .submit-actions {
-          margin-top: 0;
         }
 
         .submit-btn {
-          min-width: 190px;
-
-          padding: 13px 22px;
-
-          background: var(--green-700);
-
-          box-shadow:
-            0 8px 18px
-            rgba(8, 120, 61, .18);
+          min-width: 150px;
         }
 
         .submit-btn:hover {
@@ -2909,196 +2743,6 @@ export default function Inspeksi() {
           gap: 8px;
 
           flex-wrap: wrap;
-        }
-
-        .maintenance-overlay {
-          position: fixed;
-
-          inset: 0;
-
-          z-index: 100000;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          padding: 20px;
-
-          background:
-            rgba(13, 38, 24, .42);
-
-          backdrop-filter: blur(5px);
-
-          -webkit-backdrop-filter: blur(5px);
-
-          animation:
-            maintenanceFade .16s ease;
-        }
-
-        .maintenance-modal {
-          position: relative;
-
-          width: 100%;
-
-          max-width: 430px;
-
-          padding: 0;
-
-          overflow: hidden;
-
-          border-radius: 18px;
-
-          background: #ffffff;
-
-          border: 1px solid #dce5de;
-
-          box-shadow:
-            0 24px 60px
-            rgba(13, 38, 24, .18);
-
-          animation:
-            maintenanceUp .18s ease;
-        }
-
-        .maintenance-line {
-          width: 100%;
-
-          height: 4px;
-
-          background:
-            var(--green-700);
-        }
-
-        .maintenance-content {
-          padding: 28px 28px 26px;
-        }
-
-        .maintenance-label {
-          display: inline-block;
-
-          margin-bottom: 10px;
-
-          color: var(--green-700);
-
-          font-size: 10px;
-
-          font-weight: 800;
-
-          letter-spacing: .08em;
-        }
-
-        .maintenance-modal h2 {
-          margin: 0 0 10px;
-
-          color: var(--green-900);
-
-          font-size: 25px;
-
-          line-height: 1.2;
-
-          font-weight: 800;
-
-          letter-spacing: -.025em;
-        }
-
-        .maintenance-modal p {
-          margin: 0 0 12px;
-
-          color: #65736a;
-
-          font-size: 13px;
-
-          line-height: 1.6;
-        }
-
-        .maintenance-note {
-          margin-top: 14px !important;
-
-          padding: 12px 14px;
-
-          border-left: 3px solid #b9d8c1;
-
-          background: #f6faf7;
-
-          color: #526359 !important;
-        }
-
-        .maintenance-button {
-          width: 100%;
-
-          margin-top: 7px;
-        }
-
-        .maintenance-close {
-          position: absolute;
-
-          top: 14px;
-
-          right: 14px;
-
-          width: 32px;
-
-          height: 32px;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          border: 0;
-
-          border-radius: 50%;
-
-          background: #f3f6f4;
-
-          color: #65736a;
-
-          font-size: 22px;
-
-          line-height: 1;
-
-          cursor: pointer;
-
-          transition:
-            background .16s ease,
-            color .16s ease;
-        }
-
-        .maintenance-close:hover {
-          background: #e8efea;
-
-          color: var(--green-800);
-        }
-
-        @keyframes maintenanceFade {
-          from {
-            opacity: 0;
-          }
-
-          to {
-            opacity: 1;
-          }
-        }
-
-        @keyframes maintenanceUp {
-          from {
-            opacity: 0;
-
-            transform:
-              translateY(10px)
-              scale(.985);
-          }
-
-          to {
-            opacity: 1;
-
-            transform:
-              translateY(0)
-              scale(1);
-          }
         }
 
         /* =====================================================
@@ -3561,22 +3205,6 @@ export default function Inspeksi() {
           textarea,
           button {
             max-width: 100%;
-          }
-
-          .maintenance-overlay {
-            padding: 15px;
-          }
-
-          .maintenance-modal {
-            border-radius: 17px;
-          }
-
-          .maintenance-content {
-            padding: 25px 20px 21px;
-          }
-
-          .maintenance-modal h2 {
-            font-size: 22px;
           }
 
         }

@@ -45,11 +45,17 @@ export default function LoginPage() {
 
     const usernameValue = username.trim();
 
+    /*
+     * VALIDASI USERNAME
+     */
     if (!usernameValue) {
       setError("Username wajib diisi.");
       return;
     }
 
+    /*
+     * VALIDASI PASSWORD
+     */
     if (!password) {
       setError("Password wajib diisi.");
       return;
@@ -58,6 +64,9 @@ export default function LoginPage() {
     try {
       setLoading(true);
 
+      /*
+       * REQUEST KE API LOGIN
+       */
       const response = await fetch(
         "/api/auth/login",
         {
@@ -74,6 +83,9 @@ export default function LoginPage() {
         }
       );
 
+      /*
+       * AMBIL RESPONSE API
+       */
       const result = await response.json();
 
       console.log(
@@ -81,6 +93,9 @@ export default function LoginPage() {
         result
       );
 
+      /*
+       * CEK HASIL LOGIN
+       */
       if (
         !response.ok ||
         !result.success
@@ -94,21 +109,83 @@ export default function LoginPage() {
       }
 
       /*
-       * Simpan data user
-       *
-       * Tetap menggunakan "user"
-       * agar tidak mengubah kode lain
-       * yang sudah menggunakan storage ini.
+       * PASTIKAN DATA USER ADA
        */
+      if (!result.user) {
+        setError(
+          "Data pengguna tidak ditemukan."
+        );
+
+        return;
+      }
+
+      /*
+       * =========================================
+       * DATA USER YANG DIKIRIM API
+       * =========================================
+       *
+       * API mengirim:
+       *
+       * id_user
+       * username
+       * nama_lengkap
+       * role
+       *
+       * Password TIDAK disimpan.
+       */
+
+      const userData = {
+        id_user: result.user.id_user,
+        username: result.user.username,
+        nama_lengkap:
+          result.user.nama_lengkap,
+        role: result.user.role,
+      };
+
+      /*
+       * =========================================
+       * SIMPAN USER KE SESSION STORAGE
+       * =========================================
+       *
+       * "user" tetap digunakan supaya
+       * kompatibel dengan kode lama.
+       */
+
       sessionStorage.setItem(
         "user",
-        JSON.stringify(result.user)
+        JSON.stringify(userData)
       );
 
       /*
-       * Simpan username jika
-       * Ingat Saya aktif
+       * =========================================
+       * SIMPAN USER KE LOCAL STORAGE
+       * =========================================
+       *
+       * Digunakan Dashboard/Profile.
        */
+
+      localStorage.setItem(
+        "k3_user",
+        JSON.stringify(userData)
+      );
+
+      /*
+       * Simpan juga dengan key "user"
+       * agar kompatibel dengan kode lain
+       * yang membaca localStorage.
+       */
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(userData)
+      );
+
+      /*
+       * =========================================
+       * INGAT SAYA
+       * =========================================
+       */
+
       if (remember) {
         localStorage.setItem(
           "remember_username",
@@ -121,11 +198,22 @@ export default function LoginPage() {
       }
 
       /*
-       * LOGIN BERHASIL
-       *
-       * Perbaikan:
-       * /Dashboard -> /inspeksi
+       * =========================================
+       * BERSIHKAN PASSWORD DARI STATE
+       * =========================================
        */
+
+      setPassword("");
+
+      /*
+       * =========================================
+       * LOGIN BERHASIL
+       * =========================================
+       *
+       * Tetap diarahkan ke /inspeksi
+       * sesuai sistem kamu sebelumnya.
+       */
+
       router.replace("/inspeksi");
 
     } catch (error) {
@@ -145,9 +233,6 @@ export default function LoginPage() {
 
   /*
    * LOGIN SEBAGAI TAMU
-   *
-   * Tamu diarahkan ke /guest,
-   * bukan /Dashboard.
    */
   function loginSebagaiTamu() {
     const guestUser = {
@@ -157,7 +242,26 @@ export default function LoginPage() {
       role: "GUEST",
     };
 
+    /*
+     * Session storage
+     */
     sessionStorage.setItem(
+      "user",
+      JSON.stringify(guestUser)
+    );
+
+    /*
+     * Local storage
+     *
+     * Dibuat agar sistem profile
+     * juga mengenali user tamu.
+     */
+    localStorage.setItem(
+      "k3_user",
+      JSON.stringify(guestUser)
+    );
+
+    localStorage.setItem(
       "user",
       JSON.stringify(guestUser)
     );
@@ -175,7 +279,10 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="login-page" suppressHydrationWarning>
+    <main
+      className="login-page"
+      suppressHydrationWarning
+    >
 
       {/* =====================================================
           BACKGROUND
@@ -199,10 +306,12 @@ export default function LoginPage() {
         <div className="brand">
 
           <div className="brand-logo">
+
             <img
               src="/logo-nanas.png"
               alt="Logo"
             />
+
           </div>
 
           <div className="brand-text">

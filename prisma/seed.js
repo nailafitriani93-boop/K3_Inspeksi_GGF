@@ -24,7 +24,7 @@ const KABAG = [
   "Aldivar Cahyo Santoso",
   "Rizky Arfian Ramadhan",
   "Andhi Tarmuji",
-  "Rezsa Radhian Rotasta",
+  "Rezsa Radhian Rotasta"
 ];
 
 /*
@@ -75,7 +75,7 @@ const KASIE = [
   "Sugianto",
   "Handoko Waskito",
   "Iqbal Deby Suprapman",
-  "Sunarto",
+  "Sunarto"
 ];
 
 /*
@@ -90,7 +90,7 @@ function buatUsername(nama, role) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ".")
-    .replace(/^\.|\.$/g, "");
+    .replace(/^\.+|\.+$/g, "");
 
   return `${base}.${role.toLowerCase()}`;
 }
@@ -120,13 +120,13 @@ async function main() {
   const users = [
     ...KABAG.map((nama_lengkap) => ({
       nama_lengkap,
-      role: "KABAG",
+      role: "KABAG"
     })),
 
     ...KASIE.map((nama_lengkap) => ({
       nama_lengkap,
-      role: "KASIE",
-    })),
+      role: "KASIE"
+    }))
   ];
 
   console.log("");
@@ -134,6 +134,8 @@ async function main() {
   console.log("MEMBUAT USER K3");
   console.log("==============================================");
   console.log("");
+
+  let berhasil = 0;
 
   for (const user of users) {
     const username = buatUsername(
@@ -152,14 +154,14 @@ async function main() {
 
     await prisma.users.upsert({
       where: {
-        username,
+        username
       },
 
       update: {
         nama_lengkap: user.nama_lengkap,
         role: user.role,
         password: passwordHash,
-        aktif: true,
+        aktif: true
       },
 
       create: {
@@ -167,12 +169,14 @@ async function main() {
         nama_lengkap: user.nama_lengkap,
         role: user.role,
         password: passwordHash,
-        aktif: true,
-      },
+        aktif: true
+      }
     });
 
+    berhasil++;
+
     console.log(
-      `${user.role}\t| ${user.nama_lengkap}\t| ${username}\t| ${passwordAwal}`
+      `${user.role} | ${user.nama_lengkap} | ${username}`
     );
   }
 
@@ -180,13 +184,20 @@ async function main() {
   console.log("==============================================");
   console.log("SELESAI");
   console.log("==============================================");
+  console.log(`Total user : ${berhasil}`);
+  console.log("==============================================");
+  console.log("");
 }
 
 main()
   .catch((error) => {
     console.error("");
-    console.error("GAGAL MEMBUAT USER:");
+    console.error("==============================================");
+    console.error("GAGAL MEMBUAT USER");
+    console.error("==============================================");
     console.error(error);
+    console.error("");
+
     process.exit(1);
   })
   .finally(async () => {
