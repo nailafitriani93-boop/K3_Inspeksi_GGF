@@ -20,6 +20,7 @@ const FORM_AWAL = {
   deskripsi: "",
   latitude: "",
   longitude: "",
+  hasil_inspeksi: "TIDAK_ADA_TEMUAN",
 };
 
 function fotoKeDataUrl(file, maxWidth = 1280, quality = 0.72) {
@@ -37,17 +38,14 @@ function fotoKeDataUrl(file, maxWidth = 1280, quality = 0.72) {
 
       img.onload = () => {
         const scale = Math.min(1, maxWidth / img.width);
-
         const w = Math.round(img.width * scale);
         const h = Math.round(img.height * scale);
 
         const canvas = document.createElement("canvas");
-
         canvas.width = w;
         canvas.height = h;
 
         const ctx = canvas.getContext("2d");
-
         ctx.drawImage(img, 0, 0, w, h);
 
         resolve(canvas.toDataURL("image/jpeg", quality));
@@ -71,12 +69,18 @@ export default function Inspeksi() {
 
   const [f, setF] = useState(FORM_AWAL);
 
-  const [fotoPreview, setFotoPreview] = useState("");
-  const [fotoDataUrl, setFotoDataUrl] = useState("");
-  const [fotoError, setFotoError] = useState("");
+  const [selectedTemuan, setSelectedTemuan] = useState([]);
 
-  const fileInputRef = useRef(null);
-  const cameraInputRef = useRef(null);
+  const [fotoInspeksi, setFotoInspeksi] = useState({
+    fotoDataUrl: "",
+    fotoPreview: "",
+    fotoError: "",
+  });
+
+  const [titikTersimpan, setTitikTersimpan] = useState({
+    latitude: "",
+    longitude: "",
+  });
 
   const [showAktivitasTambah, setShowAktivitasTambah] =
     useState(false);
@@ -85,28 +89,65 @@ export default function Inspeksi() {
     nama_aktivitas: "",
   });
 
-  const [savingAktivitas, setSavingAktivitas] =
-    useState(false);
-
-  const [deletingAktivitas, setDeletingAktivitas] =
-    useState(false);
-
-  const [taskQuiz, setTaskQuiz] = useState([]);
+  const [savingAktivitas, setSavingAktivitas] = useState(false);
+  const [deletingAktivitas, setDeletingAktivitas] = useState(false);
 
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [loadingAwal, setLoadingAwal] = useState(false);
-
   const [loadingWilayahData, setLoadingWilayahData] =
     useState(false);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
   /* =====================================================
-     LOGOUT
+     REVISI NAVBAR
   ===================================================== */
 
-  const [loggingOut, setLoggingOut] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+const [showMobileNav, setShowMobileNav] = useState(false);
+const profileRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutsideClick(e) {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(e.target)
+      ) {
+        setShowProfile(false);
+      }
+    }
+
+    function handleEscape(e) {
+      if (e.key === "Escape") {
+        setShowProfile(false);
+      }
+    }
+
+    document.addEventListener(
+      "mousedown",
+      handleOutsideClick
+    );
+
+    document.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
+
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, []);
 
   async function logout() {
     if (loggingOut) return;
@@ -147,7 +188,6 @@ export default function Inspeksi() {
 
   async function ambilJson(url) {
     const r = await fetch(url);
-
     const text = await r.text();
 
     let d = {};
@@ -161,9 +201,7 @@ export default function Inspeksi() {
     }
 
     if (!r.ok) {
-      throw new Error(
-        d.error || `Gagal memuat ${url}`
-      );
+      throw new Error(d.error || `Gagal memuat ${url}`);
     }
 
     return d;
@@ -181,10 +219,50 @@ export default function Inspeksi() {
 
       const draft = JSON.parse(raw);
 
+      const {
+        selectedTemuan: draftTemuan,
+        titikTersimpan: draftTitik,
+        fotoInspeksi: draftFotoInspeksi,
+        ...formDraft
+      } = draft;
+
       setF((old) => ({
         ...old,
-        ...draft,
+        ...formDraft,
       }));
+
+      if (Array.isArray(draftTemuan)) {
+        setSelectedTemuan(
+          draftTemuan.map((item) => ({
+            ...item,
+            status:
+              item.status === "CLOSE"
+                ? "CLOSE"
+                : "OPEN",
+            fotoDataUrl: "",
+            fotoPreview: "",
+            fotoError: "",
+          }))
+        );
+      }
+
+      if (
+        draftTitik?.latitude &&
+        draftTitik?.longitude
+      ) {
+        setTitikTersimpan({
+          latitude: draftTitik.latitude,
+          longitude: draftTitik.longitude,
+        });
+      }
+
+      if (draftFotoInspeksi) {
+        setFotoInspeksi({
+          fotoDataUrl: "",
+          fotoPreview: "",
+          fotoError: "",
+        });
+      }
     } catch {}
   }, []);
 
@@ -196,17 +274,34 @@ export default function Inspeksi() {
     try {
       const draft = {
         ...f,
+
+        selectedTemuan: selectedTemuan.map((item) => ({
+          id_grup: item.id_grup,
+          nama_grup: item.nama_grup,
+          deskripsi: item.deskripsi,
+          status: item.status || "OPEN",
+        })),
+
+        titikTersimpan,
+
+        fotoInspeksi: {
+          fotoDataUrl: "",
+          fotoPreview: "",
+          fotoError: "",
+        },
       };
 
       delete draft.latitude;
       delete draft.longitude;
+      delete draft.id_grup;
+      delete draft.deskripsi;
 
       localStorage.setItem(
         DRAFT_KEY,
         JSON.stringify(draft)
       );
     } catch {}
-  }, [f]);
+  }, [f, selectedTemuan, titikTersimpan]);
 
   /* =====================================================
      LOAD MASTER
@@ -315,10 +410,8 @@ export default function Inspeksi() {
       (p) => {
         setF((x) => ({
           ...x,
-          latitude:
-            p.coords.latitude.toFixed(7),
-          longitude:
-            p.coords.longitude.toFixed(7),
+          latitude: p.coords.latitude.toFixed(7),
+          longitude: p.coords.longitude.toFixed(7),
         }));
       },
       () => {},
@@ -347,11 +440,13 @@ export default function Inspeksi() {
       (p) => {
         setF((x) => ({
           ...x,
-          latitude:
-            p.coords.latitude.toFixed(7),
-          longitude:
-            p.coords.longitude.toFixed(7),
+          latitude: p.coords.latitude.toFixed(7),
+          longitude: p.coords.longitude.toFixed(7),
         }));
+
+        setMsg(
+          'Lokasi GPS terbaru berhasil diambil. Tekan "Simpan Titik Ini" agar titik ini dikunci untuk temuan.'
+        );
       },
       (e) => {
         setErr(e.message);
@@ -363,74 +458,225 @@ export default function Inspeksi() {
   }
 
   /* =====================================================
-     FOTO
+     SIMPAN TITIK GPS
   ===================================================== */
 
-  async function onPilihFoto(e) {
+  function simpanTitikGps() {
+    if (!f.latitude || !f.longitude) {
+      setErr(
+        "Ambil lokasi GPS terlebih dahulu sebelum menyimpan titik."
+      );
+
+      return;
+    }
+
+    setTitikTersimpan({
+      latitude: f.latitude,
+      longitude: f.longitude,
+    });
+
+    setErr("");
+
+    setMsg(
+      `Titik GPS tersimpan: ${f.latitude}, ${f.longitude}. Titik ini tidak akan berubah meskipun Anda berpindah tempat sampai Anda menyimpan titik baru.`
+    );
+  }
+
+  /* =====================================================
+     FOTO BUKTI INSPEKSI
+     KHUSUS UNTUK INSPEKSI TANPA TEMUAN
+  ===================================================== */
+
+  async function onPilihFotoInspeksi(e) {
     const file = e.target.files?.[0];
 
     if (!file) return;
 
-    setFotoError("");
+    setFotoInspeksi((old) => ({
+      ...old,
+      fotoError: "",
+    }));
 
     try {
-      const dataUrl =
-        await fotoKeDataUrl(file);
+      const dataUrl = await fotoKeDataUrl(file);
 
-      setFotoDataUrl(dataUrl);
-      setFotoPreview(dataUrl);
-    } catch (err) {
-      setFotoError(err.message);
+      setFotoInspeksi({
+        fotoDataUrl: dataUrl,
+        fotoPreview: dataUrl,
+        fotoError: "",
+      });
+    } catch (error) {
+      setFotoInspeksi({
+        fotoDataUrl: "",
+        fotoPreview: "",
+        fotoError: error.message,
+      });
+    } finally {
+      e.target.value = "";
     }
   }
 
-  function hapusFotoDipilih() {
-    setFotoDataUrl("");
-    setFotoPreview("");
+  function hapusFotoInspeksi() {
+    setFotoInspeksi({
+      fotoDataUrl: "",
+      fotoPreview: "",
+      fotoError: "",
+    });
+  }
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  function bukaInputFotoInspeksi(mode) {
+    const input = document.getElementById(
+      `foto-inspeksi-${mode}`
+    );
 
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = "";
+    input?.click();
+  }
+
+  /* =====================================================
+     HASIL INSPEKSI
+  ===================================================== */
+
+  function ubahHasilInspeksi(value) {
+    setF((old) => ({
+      ...old,
+      hasil_inspeksi: value,
+    }));
+
+    setErr("");
+    setMsg("");
+
+    if (value === "TIDAK_ADA_TEMUAN") {
+      setSelectedTemuan([]);
     }
   }
 
   /* =====================================================
-     TASK
+     CHECKLIST GRUP TEMUAN
   ===================================================== */
 
-  function tambahTask() {
-    setTaskQuiz((x) => [
-      ...x,
-      {
-        task: "",
-        jawaban: "",
-        status: "Belum",
-      },
-    ]);
+  function toggleGrupTemuan(idGrup) {
+    setSelectedTemuan((current) => {
+      const exists = current.some(
+        (item) =>
+          String(item.id_grup) ===
+          String(idGrup)
+      );
+
+      if (exists) {
+        return current.filter(
+          (item) =>
+            String(item.id_grup) !==
+            String(idGrup)
+        );
+      }
+
+      const grup = master.grup.find(
+        (item) =>
+          String(item.id_grup) ===
+          String(idGrup)
+      );
+
+      if (!grup) return current;
+
+      return [
+        ...current,
+        {
+          id_grup: grup.id_grup,
+          nama_grup: grup.nama_grup,
+          deskripsi: "",
+          status: "OPEN",
+          fotoDataUrl: "",
+          fotoPreview: "",
+          fotoError: "",
+        },
+      ];
+    });
+
+    setErr("");
+    setMsg("");
   }
 
-  function updateTask(i, key, value) {
-    setTaskQuiz((x) =>
-      x.map((t, idx) =>
-        idx === i
+  function updateTemuan(index, key, value) {
+    setSelectedTemuan((current) =>
+      current.map((item, idx) =>
+        idx === index
           ? {
-              ...t,
+              ...item,
               [key]: value,
             }
-          : t
+          : item
       )
     );
   }
 
-  function hapusTask(i) {
-    setTaskQuiz((x) =>
-      x.filter(
-        (_, idx) => idx !== i
+  async function onPilihFotoTemuan(e, index) {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setSelectedTemuan((current) =>
+      current.map((item, idx) =>
+        idx === index
+          ? {
+              ...item,
+              fotoError: "",
+            }
+          : item
       )
     );
+
+    try {
+      const dataUrl = await fotoKeDataUrl(file);
+
+      setSelectedTemuan((current) =>
+        current.map((item, idx) =>
+          idx === index
+            ? {
+                ...item,
+                fotoDataUrl: dataUrl,
+                fotoPreview: dataUrl,
+                fotoError: "",
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      setSelectedTemuan((current) =>
+        current.map((item, idx) =>
+          idx === index
+            ? {
+                ...item,
+                fotoError: error.message,
+              }
+            : item
+        )
+      );
+    } finally {
+      e.target.value = "";
+    }
+  }
+
+  function hapusFotoTemuan(index) {
+    setSelectedTemuan((current) =>
+      current.map((item, idx) =>
+        idx === index
+          ? {
+              ...item,
+              fotoDataUrl: "",
+              fotoPreview: "",
+              fotoError: "",
+            }
+          : item
+      )
+    );
+  }
+
+  function bukaInputFoto(index, mode) {
+    const input = document.getElementById(
+      `foto-temuan-${mode}-${index}`
+    );
+
+    input?.click();
   }
 
   /* =====================================================
@@ -442,10 +688,7 @@ export default function Inspeksi() {
       aktivitasBaru.nama_aktivitas.trim();
 
     if (!nama) {
-      setErr(
-        "Nama aktivitas wajib diisi."
-      );
-
+      setErr("Nama aktivitas wajib diisi.");
       return;
     }
 
@@ -458,12 +701,9 @@ export default function Inspeksi() {
         "/api/master/aktivitas",
         {
           method: "POST",
-
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
             nama_aktivitas: nama,
           }),
@@ -474,8 +714,7 @@ export default function Inspeksi() {
 
       if (!r.ok) {
         throw new Error(
-          d.error ||
-          "Gagal menambah aktivitas"
+          d.error || "Gagal menambah aktivitas"
         );
       }
 
@@ -502,8 +741,7 @@ export default function Inspeksi() {
 
       setF((old) => ({
         ...old,
-        id_aktivitas:
-          d.id_aktivitas,
+        id_aktivitas: d.id_aktivitas,
       }));
 
       setAktivitasBaru({
@@ -579,9 +817,7 @@ export default function Inspeksi() {
       let d = {};
 
       try {
-        d = text
-          ? JSON.parse(text)
-          : {};
+        d = text ? JSON.parse(text) : {};
       } catch {
         throw new Error(
           `API hapus aktivitas mengembalikan respons tidak valid (${r.status})`
@@ -591,12 +827,13 @@ export default function Inspeksi() {
       if (!r.ok) {
         throw new Error(
           d.error ||
-          "Gagal menghapus aktivitas"
+            "Gagal menghapus aktivitas"
         );
       }
 
       setMaster((old) => ({
         ...old,
+
         aktivitas:
           old.aktivitas.filter(
             (a) =>
@@ -629,11 +866,198 @@ export default function Inspeksi() {
 
     setMsg("");
     setErr("");
-    setFotoError("");
 
-    if (!fotoDataUrl) {
-      setFotoError(
-        "Foto bukti temuan wajib diunggah."
+    const latitudeTersimpan =
+      titikTersimpan.latitude ||
+      f.latitude;
+
+    const longitudeTersimpan =
+      titikTersimpan.longitude ||
+      f.longitude;
+
+    if (
+      !latitudeTersimpan ||
+      !longitudeTersimpan
+    ) {
+      setErr(
+        "Titik koordinat belum tersedia. Ambil lokasi GPS lalu simpan titik terlebih dahulu."
+      );
+
+      return;
+    }
+
+    /* ===================================================
+       MODE 1
+       INSPEKSI SAJA / TIDAK ADA TEMUAN
+    =================================================== */
+
+    if (
+      f.hasil_inspeksi ===
+      "TIDAK_ADA_TEMUAN"
+    ) {
+      if (!fotoInspeksi.fotoDataUrl) {
+        setErr(
+          "Foto bukti inspeksi dan sosialisasi wajib diambil atau dipilih."
+        );
+
+        return;
+      }
+
+      setSubmitting(true);
+
+      try {
+        const r = await fetch(
+          "/api/temuan",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              ...f,
+
+              id_grup: null,
+
+              deskripsi:
+                "Inspeksi dan sosialisasi telah selesai dilakukan. Tidak ditemukan temuan K3.",
+
+              status: "SELESAI",
+
+              latitude:
+                latitudeTersimpan,
+
+              longitude:
+                longitudeTersimpan,
+
+              task_quiz: [],
+
+              foto_base64:
+                fotoInspeksi.fotoDataUrl,
+
+              jenis_inspeksi:
+                "INSPEKSI_SAJA",
+
+              hasil_inspeksi:
+                "TIDAK_ADA_TEMUAN",
+            }),
+          }
+        );
+
+        const text = await r.text();
+
+        let d = {};
+
+        try {
+          d = text
+            ? JSON.parse(text)
+            : {};
+        } catch {
+          throw new Error(
+            `API simpan inspeksi mengembalikan respons tidak valid (${r.status})`
+          );
+        }
+
+        if (!r.ok) {
+          throw new Error(
+            d.error ||
+              "Gagal menyimpan hasil inspeksi"
+          );
+        }
+
+        setMsg(
+          `Inspeksi berhasil disimpan.`
+        );
+
+        try {
+          localStorage.removeItem(
+            DRAFT_KEY
+          );
+        } catch {}
+
+        setF((x) => ({
+          ...x,
+          id_lokasi: "",
+          id_grup: "",
+          deskripsi: "",
+          latitude: "",
+          longitude: "",
+          hasil_inspeksi:
+            "TIDAK_ADA_TEMUAN",
+        }));
+
+        setSelectedTemuan([]);
+
+        setFotoInspeksi({
+          fotoDataUrl: "",
+          fotoPreview: "",
+          fotoError: "",
+        });
+
+        setTitikTersimpan({
+          latitude: "",
+          longitude: "",
+        });
+      } catch (error) {
+        setErr(error.message);
+      } finally {
+        setSubmitting(false);
+      }
+
+      return;
+    }
+
+    /* ===================================================
+       MODE 2
+       ADA TEMUAN
+    =================================================== */
+
+    if (!selectedTemuan.length) {
+      setErr(
+        "Pilih minimal satu grup temuan terlebih dahulu."
+      );
+
+      return;
+    }
+
+    const temuanTanpaDeskripsi =
+      selectedTemuan.find(
+        (item) =>
+          !item.deskripsi.trim()
+      );
+
+    if (temuanTanpaDeskripsi) {
+      setErr(
+        `Deskripsi temuan untuk grup "${temuanTanpaDeskripsi.nama_grup}" wajib diisi.`
+      );
+
+      return;
+    }
+
+    const temuanTanpaFoto =
+      selectedTemuan.find(
+        (item) =>
+          !item.fotoDataUrl
+      );
+
+    if (temuanTanpaFoto) {
+      setErr(
+        `Foto untuk grup "${temuanTanpaFoto.nama_grup}" wajib diambil atau dipilih.`
+      );
+
+      return;
+    }
+
+    const temuanTanpaStatus =
+      selectedTemuan.find(
+        (item) =>
+          !item.status
+      );
+
+    if (temuanTanpaStatus) {
+      setErr(
+        `Status OPEN/CLOSE untuk grup "${temuanTanpaStatus.nama_grup}" wajib dipilih.`
       );
 
       return;
@@ -642,55 +1066,100 @@ export default function Inspeksi() {
     setSubmitting(true);
 
     try {
-      const r = await fetch(
-        "/api/temuan",
-        {
-          method: "POST",
+      let berhasil = 0;
+      let jumlahOpen = 0;
+      let jumlahClose = 0;
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+      for (const item of selectedTemuan) {
+        const status =
+          item.status === "CLOSE"
+            ? "CLOSE"
+            : "OPEN";
 
-          body: JSON.stringify({
-            ...f,
-            task_quiz: taskQuiz,
-            foto_base64:
-              fotoDataUrl,
-          }),
+        const r = await fetch(
+          "/api/temuan",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              ...f,
+
+              id_grup:
+                item.id_grup,
+
+              deskripsi:
+                item.deskripsi.trim(),
+
+              status,
+
+              latitude:
+                latitudeTersimpan,
+
+              longitude:
+                longitudeTersimpan,
+
+              task_quiz: [],
+
+              foto_base64:
+                item.fotoDataUrl,
+
+              jenis_inspeksi:
+                "ADA_TEMUAN",
+
+              hasil_inspeksi:
+                "ADA_TEMUAN",
+            }),
+          }
+        );
+
+        const text = await r.text();
+
+        let d = {};
+
+        try {
+          d = text
+            ? JSON.parse(text)
+            : {};
+        } catch {
+          throw new Error(
+            `API simpan temuan mengembalikan respons tidak valid (${r.status})`
+          );
         }
-      );
 
-      const text = await r.text();
+        if (!r.ok) {
+          throw new Error(
+            d.error ||
+              `Gagal menyimpan grup temuan "${item.nama_grup}"`
+          );
+        }
 
-      let d = {};
+        berhasil += 1;
 
-      try {
-        d = text
-          ? JSON.parse(text)
-          : {};
-      } catch {
-        throw new Error(
-          `API simpan temuan mengembalikan respons tidak valid (${r.status})`
-        );
+        if (status === "OPEN") {
+          jumlahOpen += 1;
+        }
+
+        if (status === "CLOSE") {
+          jumlahClose += 1;
+        }
       }
 
-      if (!r.ok) {
-        throw new Error(
-          d.error ||
-          "Gagal menyimpan temuan"
-        );
-      }
-
-      setMsg(
-        `Temuan berhasil disimpan dengan status OPEN. Batas waktu tindak lanjut (7 hari): ${new Date(
+      const batas =
+        new Date(
           new Date(
             f.tanggal_temuan
           ).getTime() +
             7 * 86400000
         )
           .toISOString()
-          .slice(0, 10)}.`
+          .slice(0, 10);
+
+      setMsg(
+        `${berhasil} temuan berhasil disimpan. Batas waktu tindak lanjut untuk temuan OPEN (7 hari).`
       );
 
       try {
@@ -702,16 +1171,28 @@ export default function Inspeksi() {
       setF((x) => ({
         ...x,
         id_lokasi: "",
+        id_grup: "",
         deskripsi: "",
         latitude: "",
         longitude: "",
+        hasil_inspeksi:
+          "TIDAK_ADA_TEMUAN",
       }));
 
-      hapusFotoDipilih();
+      setSelectedTemuan([]);
 
-      setTaskQuiz([]);
-    } catch (e) {
-      setErr(e.message);
+      setFotoInspeksi({
+        fotoDataUrl: "",
+        fotoPreview: "",
+        fotoError: "",
+      });
+
+      setTitikTersimpan({
+        latitude: "",
+        longitude: "",
+      });
+    } catch (error) {
+      setErr(error.message);
     } finally {
       setSubmitting(false);
     }
@@ -721,7 +1202,7 @@ export default function Inspeksi() {
     <main className="shell">
 
       {/* =====================================================
-          HEADER
+          NAVBAR
       ===================================================== */}
 
       <header className="topbar">
@@ -742,44 +1223,186 @@ export default function Inspeksi() {
           </Link>
 
           <div className="brand-text">
-
             <b>
-              Form Inspeksi K3
+              Form Inspeksi
             </b>
 
             <span>
               Estate PG 01
             </span>
-
           </div>
 
         </div>
 
-        <nav
-          className="nav"
-          aria-label="Navigasi utama"
-        >
+       <nav
+  className={`nav ${
+    showMobileNav ? "mobile-nav-open" : ""
+  }`}
+  aria-label="Navigasi utama"
+>
 
           <Link
             href="/inspeksi"
-            className="active"
+            className="nav-page active"
           >
             Form Inspeksi
           </Link>
 
           <Link
             href="/dashboard"
-            className="nav-maintenance"
+            className="nav-page"
           >
             Dashboard
           </Link>
 
           <Link
             href="/temuan"
-            className="nav-maintenance"
+            className="nav-page"
           >
             Data Temuan
           </Link>
+
+          {/* PROFILE */}
+
+          <div
+            className="profile-wrapper"
+            ref={profileRef}
+          >
+
+            <button
+              type="button"
+              className={`profile-button ${
+                showProfile
+                  ? "profile-open"
+                  : ""
+              }`}
+              onClick={() =>
+                setShowProfile(
+                  (x) => !x
+                )
+              }
+              aria-expanded={
+                showProfile
+              }
+            >
+
+              <span className="profile-avatar">
+                N
+              </span>
+
+              <span className="profile-info">
+
+                <strong>
+                  Nirwati
+                </strong>
+
+                <small>
+                  KASIE
+                </small>
+
+              </span>
+
+              <span className="profile-chevron">
+                ▴
+              </span>
+
+            </button>
+
+            {showProfile && (
+
+              <div className="profile-popup">
+
+                <div className="profile-popup-head">
+
+                  <div className="profile-popup-avatar">
+                    N
+                  </div>
+
+                  <div className="profile-popup-name">
+
+                    <strong>
+                      Nirwati
+                    </strong>
+
+                    <span>
+                      KASIE
+                    </span>
+
+                  </div>
+
+                </div>
+
+                <div className="profile-divider" />
+
+                <div className="profile-detail">
+
+                  <span>
+                    Nama Lengkap
+                  </span>
+
+                  <strong>
+                    Nirwati
+                  </strong>
+
+                </div>
+
+                <div className="profile-detail">
+
+                  <span>
+                    Username
+                  </span>
+
+                  <strong>
+                    nirwati.kasie
+                  </strong>
+
+                </div>
+
+                <div className="profile-detail">
+
+                  <span>
+                    Role
+                  </span>
+
+                  <strong className="role-badge">
+                    KASIE
+                  </strong>
+
+                </div>
+
+                <div className="profile-divider" />
+
+                <button
+                  type="button"
+                  className="popup-logout"
+                  onClick={() => {
+                    setShowProfile(false);
+                    logout();
+                  }}
+                  disabled={
+                    loggingOut
+                  }
+                >
+
+                  <span className="logout-icon">
+                    ⇥
+                  </span>
+
+                  <span>
+                    {loggingOut
+                      ? "Keluar..."
+                      : "Logout"}
+                  </span>
+
+                </button>
+
+              </div>
+
+            )}
+
+          </div>
+
+          {/* LOGOUT */}
 
           <button
             type="button"
@@ -794,13 +1417,33 @@ export default function Inspeksi() {
 
         </nav>
 
+              <div className="mobile-menu-wrapper">
+          <button
+            type="button"
+            className={`mobile-menu-button ${
+              showMobileNav
+                ? "mobile-menu-button-open"
+                : ""
+            }`}
+            onClick={() =>
+              setShowMobileNav((x) => !x)
+            }
+            aria-label={
+              showMobileNav
+                ? "Tutup menu navigasi"
+                : "Buka menu navigasi"
+            }
+            aria-expanded={showMobileNav}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+
       </header>
 
       <div className="main">
-
-        {/* =====================================================
-            HERO
-        ===================================================== */}
 
         <section className="hero">
 
@@ -826,13 +1469,8 @@ export default function Inspeksi() {
 
         </section>
 
-        {/* =====================================================
-            MESSAGE
-        ===================================================== */}
-
         {msg && (
           <div className="notice">
-
             <span className="notice-icon">
               ✓
             </span>
@@ -840,13 +1478,11 @@ export default function Inspeksi() {
             <span>
               {msg}
             </span>
-
           </div>
         )}
 
         {err && (
           <div className="error">
-
             <span className="error-icon">
               !
             </span>
@@ -854,13 +1490,8 @@ export default function Inspeksi() {
             <span>
               {err}
             </span>
-
           </div>
         )}
-
-        {/* =====================================================
-            FORM
-        ===================================================== */}
 
         <form
           className="card"
@@ -868,18 +1499,14 @@ export default function Inspeksi() {
         >
 
           <div className="form-section-title">
-
             <div className="section-line" />
 
             <span>
               Informasi Temuan
             </span>
-
           </div>
 
           <div className="formgrid">
-
-            {/* TANGGAL */}
 
             <div className="field">
 
@@ -903,8 +1530,6 @@ export default function Inspeksi() {
 
             </div>
 
-            {/* MANDOR */}
-
             {cfg.map(
               ([
                 k,
@@ -912,7 +1537,6 @@ export default function Inspeksi() {
                 v,
                 n,
               ]) => (
-
                 <SearchSelect
                   key={k}
                   label={l}
@@ -929,11 +1553,8 @@ export default function Inspeksi() {
                     `Cari ${l.toLowerCase()}...`
                   }
                 />
-
               )
             )}
-
-            {/* WILAYAH */}
 
             <SearchSelect
               label="Wilayah"
@@ -954,11 +1575,9 @@ export default function Inspeksi() {
               placeholder={
                 loadingAwal
                   ? "Memuat wilayah..."
-                  : "Cari wilayah 1-7..."
+                  : "Cari wilayah..."
               }
             />
-
-            {/* LOKASI */}
 
             <SearchSelect
               label="Lokasi"
@@ -989,11 +1608,8 @@ export default function Inspeksi() {
               }
             />
 
-            {/* JUMLAH LOKASI */}
-
             {f.no_wilayah &&
               !loadingWilayahData && (
-
                 <div className="field full">
 
                   <div className="location-count">
@@ -1011,10 +1627,7 @@ export default function Inspeksi() {
                   </div>
 
                 </div>
-
               )}
-
-            {/* AKTIVITAS */}
 
             <div className="field">
 
@@ -1074,7 +1687,6 @@ export default function Inspeksi() {
               </div>
 
               {showAktivitasTambah && (
-
                 <div className="inlinebox">
 
                   <input
@@ -1112,7 +1724,6 @@ export default function Inspeksi() {
                       type="button"
                       className="btn secondary"
                       onClick={() => {
-
                         setShowAktivitasTambah(
                           false
                         );
@@ -1123,7 +1734,6 @@ export default function Inspeksi() {
                         });
 
                         setErr("");
-
                       }}
                     >
                       Batal
@@ -1132,200 +1742,717 @@ export default function Inspeksi() {
                   </div>
 
                 </div>
-
               )}
 
             </div>
 
-            {/* GRUP TEMUAN */}
-
-            <SearchSelect
-              label="Grup Temuan"
-              value={
-                f.id_grup
-              }
-              onChange={(x) =>
-                set(
-                  "id_grup",
-                  x
-                )
-              }
-              options={
-                master.grup
-              }
-              valueKey="id_grup"
-              labelKey="nama_grup"
-              placeholder="Cari grup temuan..."
-            />
-
-            {/* TASK */}
+            {/* =====================================================
+                HASIL INSPEKSI
+            ===================================================== */}
 
             <div className="field full">
 
-              <div className="taskhead">
+              <div className="inspection-result">
 
-                <div>
+                <div className="inspection-result-head">
 
-                  <label>
-                    Task
-                  </label>
+                  <div>
 
-                  <div className="muted small">
-                    Tambahkan task jika
-                    diperlukan untuk
-                    pemeriksaan temuan.
+                    <label>
+                      Hasil Inspeksi
+                      <span className="required-mark">
+                        *
+                      </span>
+                    </label>
+
+                    <div className="muted small">
+                      Tentukan apakah inspeksi hanya selesai tanpa temuan atau ditemukan temuan K3.
+                    </div>
+
                   </div>
 
                 </div>
 
-                <button
-                  type="button"
-                  className="btn secondary small"
-                  onClick={
-                    tambahTask
-                  }
-                >
-                  ＋ Tambah Task
-                </button>
+                <div className="inspection-options">
 
-              </div>
-
-              {taskQuiz.map(
-                (t, i) => (
-
-                  <div
-                    className="taskrow"
-                    key={i}
+                  <label
+                    className={`inspection-option ${
+                      f.hasil_inspeksi ===
+                      "TIDAK_ADA_TEMUAN"
+                        ? "selected"
+                        : ""
+                    }`}
                   >
 
                     <input
-                      value={t.task}
+                      type="radio"
+                      name="hasil_inspeksi"
+                      value="TIDAK_ADA_TEMUAN"
+                      checked={
+                        f.hasil_inspeksi ===
+                        "TIDAK_ADA_TEMUAN"
+                      }
                       onChange={(e) =>
-                        updateTask(
-                          i,
-                          "task",
+                        ubahHasilInspeksi(
                           e.target.value
                         )
                       }
-                      placeholder="Task yang perlu dilakukan"
                     />
+
+                    <span className="inspection-radio">
+                      {f.hasil_inspeksi ===
+                      "TIDAK_ADA_TEMUAN"
+                        ? "✓"
+                        : ""}
+                    </span>
+
+                    <span className="inspection-option-text">
+
+                      <strong>
+                        Inspeksi
+                      </strong>
+
+                      <small>
+                        Tidak ada temuan — inspeksi dan sosialisasi
+                      </small>
+
+                    </span>
+
+                    <span className="inspection-status selesai">
+                      SELESAI
+                    </span>
+
+                  </label>
+
+                  <label
+                    className={`inspection-option ${
+                      f.hasil_inspeksi ===
+                      "ADA_TEMUAN"
+                        ? "selected"
+                        : ""
+                    }`}
+                  >
 
                     <input
-                      value={t.jawaban}
+                      type="radio"
+                      name="hasil_inspeksi"
+                      value="ADA_TEMUAN"
+                      checked={
+                        f.hasil_inspeksi ===
+                        "ADA_TEMUAN"
+                      }
                       onChange={(e) =>
-                        updateTask(
-                          i,
-                          "jawaban",
+                        ubahHasilInspeksi(
                           e.target.value
                         )
                       }
-                      placeholder="Jawaban / Catatan"
                     />
 
-                    <select
-                      value={
-                        t.status
-                      }
-                      onChange={(e) =>
-                        updateTask(
-                          i,
-                          "status",
-                          e.target.value
-                        )
-                      }
-                    >
+                    <span className="inspection-radio">
+                      {f.hasil_inspeksi ===
+                      "ADA_TEMUAN"
+                        ? "✓"
+                        : ""}
+                    </span>
 
-                      <option>
-                        Belum
-                      </option>
+                    <span className="inspection-option-text">
 
-                      <option>
-                        Proses
-                      </option>
+                      <strong>
+                        Temuan inspeksi
+                      </strong>
 
-                      <option>
-                        Selesai
-                      </option>
+                      <small>
+                        Pilih grup temuan
+                      </small>
 
-                    </select>
+                    </span>
 
-                    <button
-                      type="button"
-                      className="btn danger small"
-                      onClick={() =>
-                        hapusTask(i)
-                      }
-                    >
-                      Hapus
-                    </button>
+                    <span className="inspection-status temuan">
+                      TEMUAN
+                    </span>
+
+                  </label>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* =====================================================
+                FOTO BUKTI INSPEKSI
+                HANYA MUNCUL UNTUK INSPEKSI TANPA TEMUAN
+            ===================================================== */}
+
+            {f.hasil_inspeksi ===
+              "TIDAK_ADA_TEMUAN" && (
+
+              <div className="field full">
+
+                <div className="inspection-proof">
+
+                  <div className="inspection-proof-head">
+
+                    <div>
+
+                      <label>
+                        Foto Bukti Inspeksi & Sosialisasi
+                        <span className="required-mark">
+                          *
+                        </span>
+                      </label>
+
+                      <div className="muted small">
+                        Foto digunakan sebagai bukti bahwa inspeksi dan sosialisasi telah dilakukan meskipun tidak ditemukan temuan.
+                      </div>
+
+                    </div>
+
+                    <span className="inspection-status selesai">
+                      SELESAI
+                    </span>
 
                   </div>
 
-                )
-              )}
+                  <div className="photo-box">
 
-            </div>
+                    <div className="photoactions">
 
-            {/* DESKRIPSI */}
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={() =>
+                          bukaInputFotoInspeksi(
+                            "pilih"
+                          )
+                        }
+                      >
+                        Pilih Foto
+                      </button>
 
-            <div className="field full">
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() =>
+                          bukaInputFotoInspeksi(
+                            "kamera"
+                          )
+                        }
+                      >
+                        Kamera
+                      </button>
 
-              <label>
-                Deskripsi Temuan
-              </label>
+                      <input
+                        id="foto-inspeksi-pilih"
+                        hidden
+                        type="file"
+                        accept="image/*"
+                        onChange={
+                          onPilihFotoInspeksi
+                        }
+                      />
 
-              <textarea
-                rows="5"
-                value={
-                  f.deskripsi
-                }
-                onChange={(e) =>
-                  set(
-                    "deskripsi",
-                    e.target.value
-                  )
-                }
-                placeholder="Jelaskan kondisi/temuan K3..."
-                required
-              />
+                      <input
+                        id="foto-inspeksi-kamera"
+                        hidden
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={
+                          onPilihFotoInspeksi
+                        }
+                      />
 
-            </div>
+                    </div>
 
-            {/* GPS */}
+                    <div className="photo-help">
+                      Wajib mengunggah minimal satu foto sebagai bukti inspeksi dan sosialisasi.
+                    </div>
 
-            <div className="field">
+                  </div>
 
-              <label>
-                Latitude
-              </label>
+                  {fotoInspeksi.fotoError && (
 
-              <input
-                value={
-                  f.latitude
-                }
-                readOnly
-                placeholder="-6.xxxxx"
-              />
+                    <div className="error small">
+                      {
+                        fotoInspeksi.fotoError
+                      }
+                    </div>
 
-            </div>
+                  )}
 
-            <div className="field">
+                  {fotoInspeksi.fotoPreview && (
 
-              <label>
-                Longitude
-              </label>
+                    <div className="fotopreview">
 
-              <input
-                value={
-                  f.longitude
-                }
-                readOnly
-                placeholder="106.xxxxx"
-              />
+                      <img
+                        src={
+                          fotoInspeksi.fotoPreview
+                        }
+                        alt="Pratinjau foto bukti inspeksi"
+                      />
 
-            </div>
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={
+                          hapusFotoInspeksi
+                        }
+                      >
+                        Hapus Foto
+                      </button>
 
-            {/* MAPS */}
+                    </div>
+
+                  )}
+
+                </div>
+
+              </div>
+
+            )}
+
+            {/* =====================================================
+                CHECKLIST GRUP TEMUAN
+                HANYA MUNCUL JIKA ADA TEMUAN
+            ===================================================== */}
+
+            {f.hasil_inspeksi ===
+              "ADA_TEMUAN" && (
+
+              <div className="field full">
+
+                <div className="temuan-workspace">
+
+                  <div className="temuan-selector-panel">
+
+                    <div className="temuan-head">
+
+                      <div>
+
+                        <label>
+                          Grup Temuan
+                        </label>
+
+                        <div className="muted small">
+                          Checklist semua jenis temuan yang ditemukan. Setiap temuan wajib memiliki deskripsi, foto, dan status OPEN/CLOSE.
+                        </div>
+
+                      </div>
+
+                      <div className="temuan-count">
+                        {selectedTemuan.length} dipilih
+                      </div>
+
+                    </div>
+
+                    <div className="grup-checklist">
+
+                      {master.grup.length === 0 ? (
+
+                        <div className="grup-empty">
+
+                          {loadingAwal
+                            ? "Memuat grup temuan..."
+                            : "Belum ada grup temuan."}
+
+                        </div>
+
+                      ) : (
+
+                        master.grup.map(
+                          (grup, grupIndex) => {
+
+                            const selectedIndex =
+                              selectedTemuan.findIndex(
+                                (item) =>
+                                  String(
+                                    item.id_grup
+                                  ) ===
+                                  String(
+                                    grup.id_grup
+                                  )
+                              );
+
+                            const checked =
+                              selectedIndex !== -1;
+
+                            const item =
+                              checked
+                                ? selectedTemuan[
+                                    selectedIndex
+                                  ]
+                                : null;
+
+                            return (
+
+                              <div
+                                className={`grup-item ${
+                                  checked
+                                    ? "checked"
+                                    : ""
+                                }`}
+                                key={
+                                  grup.id_grup
+                                }
+                              >
+
+                                <label className="grup-check">
+
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      checked
+                                    }
+                                    onChange={() =>
+                                      toggleGrupTemuan(
+                                        grup.id_grup
+                                      )
+                                    }
+                                  />
+
+                                  <span className="checkmark">
+                                    {checked
+                                      ? "✓"
+                                      : ""}
+                                  </span>
+
+                                  <span className="grup-check-text">
+
+                                    <strong>
+                                      {
+                                        grup.nama_grup
+                                      }
+                                    </strong>
+
+                                    <small>
+                                      {checked
+                                        ? "Temuan dipilih — isi detail di bawah"
+                                        : "Klik untuk memilih"}
+                                    </small>
+
+                                  </span>
+
+                                </label>
+
+                                {checked &&
+                                  item && (
+
+                                    <div className="temuan-card">
+
+                                      <div className="temuan-card-title">
+
+                                        <div className="temuan-number">
+                                          {grupIndex + 1}
+                                        </div>
+
+                                        <div>
+
+                                          <strong>
+                                            {
+                                              item.nama_grup
+                                            }
+                                          </strong>
+
+                                          <span>
+                                            Detail temuan
+                                          </span>
+
+                                        </div>
+
+                                        <button
+                                          type="button"
+                                          className="btn danger small"
+                                          onClick={() =>
+                                            toggleGrupTemuan(
+                                              item.id_grup
+                                            )
+                                          }
+                                        >
+                                          Hapus
+                                        </button>
+
+                                      </div>
+
+                                      <div className="temuan-card-body">
+
+                                        <div className="temuan-description">
+
+                                          <label>
+                                            Deskripsi Temuan
+                                            <span className="required-mark">
+                                              *
+                                            </span>
+                                          </label>
+
+                                          <textarea
+                                            rows="5"
+                                            value={
+                                              item.deskripsi
+                                            }
+                                            onChange={(e) =>
+                                              updateTemuan(
+                                                selectedIndex,
+                                                "deskripsi",
+                                                e.target.value
+                                              )
+                                            }
+                                            placeholder={`Jelaskan kondisi temuan ${item.nama_grup}...`}
+                                            required
+                                          />
+
+                                        </div>
+
+                                        <div className="temuan-photo">
+
+                                          <label>
+                                            Foto Temuan
+                                            <span className="required-mark">
+                                              *
+                                            </span>
+                                          </label>
+
+                                          <div className="photo-box temuan-photo-box">
+
+                                            <div className="photoactions">
+
+                                              <button
+                                                type="button"
+                                                className="btn secondary"
+                                                onClick={() =>
+                                                  bukaInputFoto(
+                                                    selectedIndex,
+                                                    "pilih"
+                                                  )
+                                                }
+                                              >
+                                                Pilih Foto
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                className="btn"
+                                                onClick={() =>
+                                                  bukaInputFoto(
+                                                    selectedIndex,
+                                                    "kamera"
+                                                  )
+                                                }
+                                              >
+                                                Kamera
+                                              </button>
+
+                                              <input
+                                                id={`foto-temuan-pilih-${selectedIndex}`}
+                                                hidden
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) =>
+                                                  onPilihFotoTemuan(
+                                                    e,
+                                                    selectedIndex
+                                                  )
+                                                }
+                                              />
+
+                                              <input
+                                                id={`foto-temuan-kamera-${selectedIndex}`}
+                                                hidden
+                                                type="file"
+                                                accept="image/*"
+                                                capture="environment"
+                                                onChange={(e) =>
+                                                  onPilihFotoTemuan(
+                                                    e,
+                                                    selectedIndex
+                                                  )
+                                                }
+                                              />
+
+                                            </div>
+
+                                            <div className="photo-help">
+                                              Foto khusus untuk temuan{" "}
+                                              {
+                                                item.nama_grup
+                                              }.
+                                            </div>
+
+                                          </div>
+
+                                          {item.fotoError && (
+
+                                            <div className="error small">
+                                              {
+                                                item.fotoError
+                                              }
+                                            </div>
+
+                                          )}
+
+                                          {item.fotoPreview && (
+
+                                            <div className="fotopreview">
+
+                                              <img
+                                                src={
+                                                  item.fotoPreview
+                                                }
+                                                alt={`Pratinjau foto ${item.nama_grup}`}
+                                              />
+
+                                              <button
+                                                type="button"
+                                                className="btn secondary small"
+                                                onClick={() =>
+                                                  hapusFotoTemuan(
+                                                    selectedIndex
+                                                  )
+                                                }
+                                              >
+                                                Hapus Foto
+                                              </button>
+
+                                            </div>
+
+                                          )}
+
+                                          {/* STATUS OPEN / CLOSE */}
+
+                                          <div className="temuan-status-box">
+
+                                            <label>
+                                              Status Temuan
+                                              <span className="required-mark">
+                                                *
+                                              </span>
+                                            </label>
+
+                                            <div className="status-options">
+
+                                              <label
+                                                className={`status-option open ${
+                                                  item.status ===
+                                                  "OPEN"
+                                                    ? "selected"
+                                                    : ""
+                                                }`}
+                                              >
+
+                                                <input
+                                                  type="radio"
+                                                  name={`status-temuan-${selectedIndex}`}
+                                                  value="OPEN"
+                                                  checked={
+                                                    item.status ===
+                                                    "OPEN"
+                                                  }
+                                                  onChange={() =>
+                                                    updateTemuan(
+                                                      selectedIndex,
+                                                      "status",
+                                                      "OPEN"
+                                                    )
+                                                  }
+                                                />
+
+                                                <span className="status-radio">
+                                                  {item.status ===
+                                                  "OPEN"
+                                                    ? "✓"
+                                                    : ""}
+                                                </span>
+
+                                                <span>
+                                                  <strong>
+                                                    OPEN
+                                                  </strong>
+
+                                                  <small>
+                                                    Perlu tindak lanjut
+                                                  </small>
+                                                </span>
+
+                                              </label>
+
+                                              <label
+                                                className={`status-option close ${
+                                                  item.status ===
+                                                  "CLOSE"
+                                                    ? "selected"
+                                                    : ""
+                                                }`}
+                                              >
+
+                                                <input
+                                                  type="radio"
+                                                  name={`status-temuan-${selectedIndex}`}
+                                                  value="CLOSE"
+                                                  checked={
+                                                    item.status ===
+                                                    "CLOSE"
+                                                  }
+                                                  onChange={() =>
+                                                    updateTemuan(
+                                                      selectedIndex,
+                                                      "status",
+                                                      "CLOSE"
+                                                    )
+                                                  }
+                                                />
+
+                                                <span className="status-radio">
+                                                  {item.status ===
+                                                  "CLOSE"
+                                                    ? "✓"
+                                                    : ""}
+                                                </span>
+
+                                                <span>
+                                                  <strong>
+                                                    CLOSE
+                                                  </strong>
+
+                                                  <small>
+                                                    Sudah selesai
+                                                  </small>
+                                                </span>
+
+                                              </label>
+
+                                            </div>
+
+                                          </div>
+
+                                        </div>
+
+                                      </div>
+
+                                    </div>
+
+                                  )}
+
+                              </div>
+
+                            );
+                          }
+                        )
+
+                      )}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            )}
+
+            {/* =====================================================
+                LOKASI & PETA
+            ===================================================== */}
 
             <div className="field full">
 
@@ -1343,30 +2470,66 @@ export default function Inspeksi() {
                     <div className="coordinate-box">
 
                       <div className="small muted">
-                        Koordinat GPS
+                        {titikTersimpan.latitude
+                          ? "Titik GPS Tersimpan"
+                          : "Koordinat GPS Saat Ini"}
                       </div>
 
                       <strong>
-                        {f.latitude},{" "}
-                        {f.longitude}
+                        {(
+                          titikTersimpan.latitude ||
+                          f.latitude
+                        )},{" "}
+                        {(
+                          titikTersimpan.longitude ||
+                          f.longitude
+                        )}
                       </strong>
+
+                      <div className="small gps-status">
+                        {titikTersimpan.latitude
+                          ? "Titik dikunci dan tidak mengikuti perpindahan Anda."
+                          : "Titik belum dikunci. Simpan titik ini sebelum menyimpan inspeksi."}
+                      </div>
 
                     </div>
 
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={gps}
-                    >
-                      Ambil Lokasi Saya
-                    </button>
+                    <div className="gps-actions">
+
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        onClick={gps}
+                      >
+                        Ambil Lokasi Saya
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={
+                          simpanTitikGps
+                        }
+                      >
+                        {titikTersimpan.latitude
+                          ? "Simpan Titik Baru"
+                          : "Simpan Titik Ini"}
+                      </button>
+
+                    </div>
 
                   </div>
 
                   <iframe
                     title="Preview lokasi inspeksi"
                     src={`https://www.google.com/maps?q=${encodeURIComponent(
-                      `${f.latitude},${f.longitude}`
+                      `${
+                        titikTersimpan.latitude ||
+                        f.latitude
+                      },${
+                        titikTersimpan.longitude ||
+                        f.longitude
+                      }`
                     )}&z=17&output=embed`}
                     className="mapframe"
                     loading="lazy"
@@ -1391,8 +2554,7 @@ export default function Inspeksi() {
 
                     <p>
                       Menunggu izin/lokasi GPS.
-                      Peta akan tampil otomatis
-                      setelah koordinat tersedia.
+                      Setelah lokasi didapat, simpan titik agar koordinat tidak berubah saat Anda berpindah tempat.
                     </p>
 
                   </div>
@@ -1411,106 +2573,7 @@ export default function Inspeksi() {
 
             </div>
 
-            {/* FOTO */}
-
-            <div className="field full">
-
-              <label>
-                Foto Bukti Temuan
-                <span className="required-mark">
-                  *
-                </span>
-              </label>
-
-              <div className="photo-box">
-
-                <div className="photoactions">
-
-                  <button
-                    type="button"
-                    className="btn secondary"
-                    onClick={() =>
-                      fileInputRef.current?.click()
-                    }
-                  >
-                    Pilih Foto
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn secondary"
-                    onClick={() =>
-                      cameraInputRef.current?.click()
-                    }
-                  >
-                    Kamera
-                  </button>
-
-                  <input
-                    ref={fileInputRef}
-                    hidden
-                    type="file"
-                    accept="image/*"
-                    onChange={
-                      onPilihFoto
-                    }
-                  />
-
-                  <input
-                    ref={cameraInputRef}
-                    hidden
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={
-                      onPilihFoto
-                    }
-                  />
-
-                </div>
-
-                <div className="photo-help">
-                  Upload foto kondisi temuan sebagai bukti inspeksi.
-                </div>
-
-              </div>
-
-              {fotoError && (
-                <div className="error small">
-                  {fotoError}
-                </div>
-              )}
-
-              {fotoPreview && (
-
-                <div className="fotopreview">
-
-                  <img
-                    src={fotoPreview}
-                    alt="Pratinjau foto temuan"
-                  />
-
-                  <button
-                    type="button"
-                    className="btn secondary small"
-                    onClick={
-                      hapusFotoDipilih
-                    }
-                  >
-                    Hapus Foto
-                  </button>
-
-                </div>
-
-              )}
-
-            </div>
-
           </div>
-
-          {/* =====================================================
-              SUBMIT
-          ===================================================== */}
 
           <div className="submit-area">
 
@@ -1527,7 +2590,10 @@ export default function Inspeksi() {
                 </strong>
 
                 <span>
-                  Foto bukti temuan wajib tersedia sebelum disimpan.
+                  {f.hasil_inspeksi ===
+                  "TIDAK_ADA_TEMUAN"
+                    ? "Inspeksi tanpa temuan wajib memiliki foto bukti inspeksi dan sosialisasi."
+                    : "Setiap grup temuan yang dipilih wajib memiliki deskripsi, foto, dan status OPEN/CLOSE."}
                 </span>
 
               </div>
@@ -1539,13 +2605,15 @@ export default function Inspeksi() {
               <button
                 className="btn submit-btn"
                 type="submit"
-                disabled={
-                  submitting
-                }
+                disabled={submitting}
               >
                 {submitting
                   ? "Menyimpan..."
+                  : f.hasil_inspeksi ===
+                    "TIDAK_ADA_TEMUAN"
+                  ? "Simpan Inspeksi"
                   : "Simpan Temuan"}
+
               </button>
 
             </div>
@@ -1553,10 +2621,6 @@ export default function Inspeksi() {
           </div>
 
         </form>
-
-        {/* =====================================================
-            NAVIGASI BAWAH
-        ===================================================== */}
 
         <div className="navigation-card">
 
@@ -1592,14 +2656,10 @@ export default function Inspeksi() {
 
       </div>
 
-      {/* =====================================================
-          STYLE
-      ===================================================== */}
-
       <style jsx global>{`
 
         @import url(
-          'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
+          'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600&display=swap'
         );
 
         :root {
@@ -1608,30 +2668,19 @@ export default function Inspeksi() {
           --green-700: #08783d;
           --green-600: #079447;
           --green-500: #18a957;
-
           --green-soft: #edf8f1;
           --green-soft-2: #f5faf6;
-
           --text: #17231a;
           --text-soft: #5d6b62;
           --text-muted: #87928b;
-
           --border: #dce5de;
           --border-dark: #ccd8cf;
-
           --white: #ffffff;
-
           --danger-bg: #fff1f1;
           --danger-text: #a52c2c;
-
-          --shadow-sm:
-            0 2px 8px rgba(20, 45, 29, .05);
-
-          --shadow:
-            0 12px 35px rgba(20, 45, 29, .08);
-
-          --shadow-lg:
-            0 20px 55px rgba(20, 45, 29, .12);
+          --shadow-sm: 0 2px 8px rgba(20,45,29,.05);
+          --shadow: 0 12px 35px rgba(20,45,29,.08);
+          --shadow-lg: 0 20px 55px rgba(20,45,29,.12);
         }
 
         * {
@@ -1647,10 +2696,7 @@ export default function Inspeksi() {
         }
 
         body {
-          font-family:
-            "Inter",
-            Arial,
-            sans-serif;
+          font-family: "Inter", Arial, sans-serif;
           color: var(--text);
         }
 
@@ -1676,240 +2722,392 @@ export default function Inspeksi() {
             );
         }
 
-        /* =====================================================
-           TOPBAR
-        ===================================================== */
-
         .topbar {
           position: fixed;
-
           top: 0;
           left: 0;
           right: 0;
-
           z-index: 1000;
-
           min-height: 78px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: space-between;
-
           gap: 20px;
-
-          padding:
-            10px
-            clamp(18px, 4vw, 54px);
-
-          background:
-            rgba(255, 255, 255, .96);
-
-          border-bottom:
-            1px solid #e3eae5;
-
-          backdrop-filter:
-            blur(12px);
-
-          -webkit-backdrop-filter:
-            blur(12px);
+          padding: 10px clamp(18px,4vw,54px);
+          background: rgba(255,255,255,.96);
+          border-bottom: 1px solid #e3eae5;
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
         }
 
         .brand {
           display: flex;
-
           align-items: center;
-
           gap: 12px;
-
           min-width: 0;
         }
 
         .brand-logo-link {
           display: flex;
-
           align-items: center;
-
           text-decoration: none;
         }
 
         .logo {
           width: 110px;
-
           height: 52px;
-
-          flex:
-            0 0 110px;
-
+          flex: 0 0 110px;
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           overflow: hidden;
         }
 
         .logo img {
           display: block;
-
           width: 100%;
-
           max-width: 110px;
-
           height: auto;
-
           object-fit: contain;
         }
 
         .brand-text {
           display: flex;
-
           flex-direction: column;
-
           gap: 2px;
-
           line-height: 1.2;
         }
 
         .brand-text b {
           color: var(--green-900);
-
           font-size: 15px;
-
           font-weight: 800;
         }
 
         .brand-text span {
           color: var(--text-muted);
-
           font-size: 11px;
-
           font-weight: 600;
         }
 
         .nav {
           display: flex;
-
           align-items: center;
-
           gap: 7px;
+          font-family: "Poppins", sans-serif;
+          font-weight: 600;
         }
 
-        .nav a,
-        .nav-maintenance,
-        .nav-login,
-        .nav-logout {
+        .nav-page {
           position: relative;
-
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 42px;
           border: 0;
-
           border-radius: 10px;
-
-          padding:
-            10px
-            13px;
-
+          padding: 10px 13px;
           background: transparent;
-
           color: #5f6c64;
-
+          font-family: "Poppins", sans-serif;
           font-size: 12px;
-
-          font-weight: 700;
-
+          font-weight: 600;
           text-decoration: none;
-
           white-space: nowrap;
-
           transition:
             background .16s ease,
             color .16s ease,
             transform .16s ease;
         }
 
-        .nav a:hover,
-        .nav-maintenance:hover,
-        .nav-login:hover {
+        .nav-page:hover {
           background: #f1f6f2;
-
           color: var(--green-800);
         }
 
-        .nav a.active {
+        .nav-page.active {
+          min-width: 112px;
           color: var(--green-700);
+          background: #edf8f1;
+          border-bottom: 2px solid var(--green-600);
+          border-radius: 10px;
         }
 
-        .nav a.active::after {
-          content: "";
+        .nav-page.active::after {
+          display: none;
+        }
 
+        .profile-wrapper {
+          position: relative;
+          flex: 0 0 auto;
+        }
+
+        .profile-button {
+          min-width: 145px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 4px 10px 4px 7px;
+          border: 1px solid #dbe5de;
+          border-radius: 12px;
+          background: #ffffff;
+          color: var(--green-900);
+          font-family: "Poppins", sans-serif;
+          font-weight: 600;
+          text-align: left;
+          transition:
+            background .16s ease,
+            border-color .16s ease,
+            box-shadow .16s ease;
+        }
+
+        .profile-button:hover,
+        .profile-button.profile-open {
+          background: #f8fbf9;
+          border-color: #cbdacf;
+        }
+
+        .profile-avatar {
+          width: 34px;
+          height: 34px;
+          flex: 0 0 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: var(--green-600);
+          color: #ffffff;
+          font-family: "Poppins", sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .profile-info {
+          min-width: 0;
+          flex: 1 1 auto;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          line-height: 1.05;
+        }
+
+        .profile-info strong {
+          overflow: hidden;
+          color: #25362c;
+          font-family: "Poppins", sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .profile-info small {
+          margin-top: 4px;
+          color: #7c8981;
+          font-family: "Poppins", sans-serif;
+          font-size: 8px;
+          font-weight: 600;
+        }
+
+        .profile-chevron {
+          margin-left: 2px;
+          color: #7c8981;
+          font-size: 8px;
+          line-height: 1;
+          transform: translateY(-1px);
+        }
+
+        .profile-popup {
           position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          z-index: 1100;
+          width: 298px;
+          padding: 16px;
+          border: 1px solid #dfe6e1;
+          border-radius: 17px;
+          background: #ffffff;
+          box-shadow:
+            0 18px 40px
+            rgba(24,45,32,.13);
+          animation: profilePopupIn .14s ease-out;
+        }
 
-          left: 13px;
-          right: 13px;
-          bottom: 4px;
+        @keyframes profilePopupIn {
+          from {
+            opacity: 0;
+            transform: translateY(-4px);
+          }
 
-          height: 2px;
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
 
-          border-radius: 999px;
+        .profile-popup-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 1px 0 3px;
+        }
 
-          background: var(--green-700);
+        .profile-popup-avatar {
+          width: 43px;
+          height: 43px;
+          flex: 0 0 43px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: var(--green-600);
+          color: #ffffff;
+          font-family: "Poppins", sans-serif;
+          font-size: 17px;
+          font-weight: 600;
+        }
+
+        .profile-popup-name {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .profile-popup-name strong {
+          color: #26382d;
+          font-family: "Poppins", sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .profile-popup-name span {
+          color: #7b8980;
+          font-family: "Poppins", sans-serif;
+          font-size: 9px;
+          font-weight: 600;
+        }
+
+        .profile-divider {
+          width: 100%;
+          height: 1px;
+          margin: 11px 0;
+          background: #e7ece8;
+        }
+
+        .profile-detail {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          margin-bottom: 11px;
+        }
+
+        .profile-detail:last-of-type {
+          margin-bottom: 0;
+        }
+
+        .profile-detail > span {
+          color: #89948d;
+          font-family: "Poppins", sans-serif;
+          font-size: 9px;
+          font-weight: 500;
+        }
+
+        .profile-detail > strong {
+          color: #26382d;
+          font-family: "Poppins", sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+        }
+
+        .role-badge {
+          width: fit-content;
+          padding: 4px 8px;
+          border-radius: 6px;
+          background: #e7f6eb;
+          color: var(--green-700) !important;
+          font-family: "Poppins", sans-serif;
+          font-size: 9px !important;
+          font-weight: 600 !important;
+        }
+
+        .popup-logout {
+          width: 100%;
+          min-height: 39px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          border: 1px solid #f0d2d2;
+          border-radius: 10px;
+          background: #fff8f8;
+          color: #b42e2e;
+          font-family: "Poppins", sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+          transition:
+            background .16s ease,
+            border-color .16s ease;
+        }
+
+        .popup-logout:hover {
+          background: #fff0f0;
+          border-color: #ebc2c2;
+        }
+
+        .popup-logout:disabled {
+          opacity: .6;
+          cursor: not-allowed;
+        }
+
+        .logout-icon {
+          font-size: 14px;
+          font-weight: 600;
         }
 
         .nav-logout {
-          color: #a12d2d;
-
-          background: #fff6f6;
+          min-height: 42px;
+          border: 1px solid #d9e3dc;
+          border-radius: 10px;
+          padding: 10px 15px;
+          background: #ffffff;
+          color: #304037;
+          font-family: "Poppins", sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+          white-space: nowrap;
+          transition:
+            background .16s ease,
+            color .16s ease,
+            border-color .16s ease;
         }
 
         .nav-logout:hover {
-          background: #ffecec;
+          background: #f7faf8;
+          color: var(--green-800);
+          border-color: #cbd8cf;
         }
 
         .nav-logout:disabled {
           opacity: .65;
-
           cursor: not-allowed;
         }
 
-        /* =====================================================
-           MAIN
-        ===================================================== */
-
         .main {
-          width: min(
-            1180px,
-            calc(100% - 36px)
-          );
-
+          width: min(1180px,calc(100% - 36px));
           margin: 0 auto;
-
-          padding:
-            28px 0 50px;
+          padding: 28px 0 50px;
         }
-
-        /* =====================================================
-           HERO
-        ===================================================== */
 
         .hero {
           position: relative;
-
           min-height: 260px;
-
           display: flex;
-
           align-items: center;
-
           overflow: hidden;
-
-          padding:
-            45px
-            clamp(30px, 6vw, 64px);
-
+          padding: 45px clamp(30px,6vw,64px);
           border-radius: 26px;
-
           background:
             linear-gradient(
               135deg,
@@ -1917,278 +3115,167 @@ export default function Inspeksi() {
               #079447 52%,
               #16a957 100%
             );
-
           box-shadow:
             0 18px 50px
-            rgba(10, 100, 49, .18);
+            rgba(10,100,49,.18);
         }
 
         .hero::before {
           content: "";
-
           position: absolute;
-
           width: 330px;
-
           height: 330px;
-
           right: -120px;
-
           top: -140px;
-
           border-radius: 50%;
-
-          background:
-            rgba(255, 255, 255, .08);
+          background: rgba(255,255,255,.08);
         }
 
         .hero::after {
           content: "";
-
           position: absolute;
-
           width: 230px;
-
           height: 230px;
-
           right: 8%;
-
           bottom: -150px;
-
           border-radius: 50%;
-
-          background:
-            rgba(255, 255, 255, .06);
+          background: rgba(255,255,255,.06);
         }
 
         .hero-decoration {
           position: absolute;
-
           border-radius: 50%;
-
-          background:
-            rgba(255, 255, 255, .08);
+          background: rgba(255,255,255,.08);
         }
 
         .hero-decoration-one {
           width: 70px;
-
           height: 70px;
-
           right: 28%;
-
           top: 30px;
         }
 
         .hero-decoration-two {
           width: 28px;
-
           height: 28px;
-
           right: 15%;
-
           bottom: 46px;
         }
 
         .hero-content-left {
           position: relative;
-
           z-index: 2;
         }
 
         .eyebrow {
           display: inline-flex;
-
           align-items: center;
-
           margin-bottom: 12px;
-
-          padding:
-            7px
-            12px;
-
+          padding: 7px 12px;
           border-radius: 999px;
-
-          background:
-            rgba(255, 255, 255, .14);
-
+          background: rgba(255,255,255,.14);
           color: #e9fff1;
-
           font-size: 10px;
-
           font-weight: 800;
-
           letter-spacing: .12em;
         }
 
         .hero .title {
           margin: 0;
-
           color: #ffffff;
-
-          font-size:
-            clamp(42px, 6vw, 64px);
-
+          font-size: clamp(42px,6vw,64px);
           line-height: 1;
-
           font-weight: 800;
-
           letter-spacing: -.045em;
         }
 
         .hero-subtitle {
-          margin:
-            14px 0 0;
-
-          color:
-            rgba(255, 255, 255, .85);
-
+          margin: 14px 0 0;
+          color: rgba(255,255,255,.85);
           font-size: 15px;
-
           font-weight: 500;
         }
-
-        /* =====================================================
-           MESSAGE
-        ===================================================== */
 
         .notice,
         .error {
           margin-top: 16px;
-
           display: flex;
-
           align-items: flex-start;
-
           gap: 10px;
-
-          padding:
-            13px
-            16px;
-
+          padding: 13px 16px;
           border-radius: 13px;
-
           font-size: 13px;
-
           line-height: 1.5;
         }
 
         .notice {
           background: #eefaf2;
-
-          border:
-            1px solid #cfe9d7;
-
+          border: 1px solid #cfe9d7;
           color: #166b39;
         }
 
         .notice-icon {
           width: 22px;
-
           height: 22px;
-
           flex: 0 0 22px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           border-radius: 50%;
-
           background: #d5f1df;
-
           font-weight: 800;
         }
 
         .error {
           background: var(--danger-bg);
-
-          border:
-            1px solid #f1caca;
-
+          border: 1px solid #f1caca;
           color: var(--danger-text);
         }
 
         .error-icon {
           width: 22px;
-
           height: 22px;
-
           flex: 0 0 22px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           border-radius: 50%;
-
           background: #ffdcdc;
-
           font-weight: 800;
         }
 
-        /* =====================================================
-           CARD
-        ===================================================== */
-
         .card {
           margin-top: 18px;
-
-          padding:
-            clamp(22px, 4vw, 34px);
-
-          border:
-            1px solid #e0e8e2;
-
+          padding: clamp(22px,4vw,34px);
+          border: 1px solid #e0e8e2;
           border-radius: 22px;
-
-          background:
-            rgba(255, 255, 255, .95);
-
-          box-shadow:
-            var(--shadow);
+          background: rgba(255,255,255,.95);
+          box-shadow: var(--shadow);
         }
 
         .form-section-title {
           display: flex;
-
           align-items: center;
-
           gap: 10px;
-
           margin-bottom: 24px;
-
           color: var(--green-800);
-
           font-size: 12px;
-
           font-weight: 800;
-
           letter-spacing: .06em;
-
           text-transform: uppercase;
         }
 
         .section-line {
           width: 34px;
-
           height: 3px;
-
           border-radius: 999px;
-
           background: var(--green-700);
         }
 
         .formgrid {
           display: grid;
-
           grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-
+            repeat(2,minmax(0,1fr));
           gap: 19px;
         }
 
@@ -2202,13 +3289,9 @@ export default function Inspeksi() {
 
         .field label {
           display: block;
-
           margin-bottom: 7px;
-
           color: #34443a;
-
           font-size: 12px;
-
           font-weight: 700;
         }
 
@@ -2216,24 +3299,13 @@ export default function Inspeksi() {
         select,
         textarea {
           width: 100%;
-
-          border:
-            1px solid var(--border);
-
+          border: 1px solid var(--border);
           border-radius: 11px;
-
           outline: none;
-
           background: #ffffff;
-
           color: var(--text);
-
-          padding:
-            11px
-            13px;
-
+          padding: 11px 13px;
           font-size: 13px;
-
           transition:
             border-color .16s ease,
             box-shadow .16s ease;
@@ -2241,62 +3313,42 @@ export default function Inspeksi() {
 
         textarea {
           resize: vertical;
-
           min-height: 120px;
         }
 
         input:focus,
         select:focus,
         textarea:focus {
-          border-color:
-            rgba(7, 148, 71, .65);
-
+          border-color: rgba(7,148,71,.65);
           box-shadow:
             0 0 0 3px
-            rgba(7, 148, 71, .09);
+            rgba(7,148,71,.09);
         }
 
         .selectrow {
           display: flex;
-
           align-items: center;
-
           gap: 8px;
         }
 
         .selectrow > :first-child {
           flex: 1 1 auto;
-
           min-width: 0;
         }
 
         .btn {
           display: inline-flex;
-
           align-items: center;
-
           justify-content: center;
-
           min-height: 42px;
-
-          padding:
-            10px
-            15px;
-
+          padding: 10px 15px;
           border: 0;
-
           border-radius: 10px;
-
           background: var(--green-700);
-
           color: #ffffff;
-
           font-size: 12px;
-
           font-weight: 700;
-
           text-decoration: none;
-
           transition:
             transform .16s ease,
             background .16s ease,
@@ -2305,26 +3357,19 @@ export default function Inspeksi() {
 
         .btn:hover {
           background: var(--green-800);
-
-          transform:
-            translateY(-1px);
+          transform: translateY(-1px);
         }
 
         .btn:disabled {
           opacity: .6;
-
           cursor: not-allowed;
-
           transform: none;
         }
 
         .btn.secondary {
           background: #f0f5f1;
-
           color: #35513f;
-
-          border:
-            1px solid #dce6df;
+          border: 1px solid #dce6df;
         }
 
         .btn.secondary:hover {
@@ -2333,11 +3378,8 @@ export default function Inspeksi() {
 
         .btn.danger {
           background: #fff1f1;
-
           color: #b13333;
-
-          border:
-            1px solid #f0d0d0;
+          border: 1px solid #f0d0d0;
         }
 
         .btn.danger:hover {
@@ -2346,34 +3388,22 @@ export default function Inspeksi() {
 
         .btn.small {
           min-height: 36px;
-
-          padding:
-            8px
-            11px;
-
+          padding: 8px 11px;
           font-size: 11px;
         }
 
         .inlinebox {
           margin-top: 10px;
-
           padding: 12px;
-
           border-radius: 13px;
-
           background: #f7faf8;
-
-          border:
-            1px dashed #cbd9cf;
+          border: 1px dashed #cbd9cf;
         }
 
         .actions {
           display: flex;
-
           align-items: center;
-
           gap: 8px;
-
           flex-wrap: wrap;
         }
 
@@ -2383,21 +3413,12 @@ export default function Inspeksi() {
 
         .location-count {
           display: flex;
-
           align-items: center;
-
           gap: 8px;
-
-          padding:
-            10px
-            13px;
-
+          padding: 10px 13px;
           border-radius: 10px;
-
           background: #f3f8f4;
-
           color: #52665a;
-
           font-size: 12px;
         }
 
@@ -2406,148 +3427,517 @@ export default function Inspeksi() {
         }
 
         /* =====================================================
-           TASK
+           HASIL INSPEKSI
         ===================================================== */
 
-        .taskhead {
+        .inspection-result {
+          padding: 14px;
+          border: 1px solid #e1e9e3;
+          border-radius: 16px;
+          background: #fbfdfb;
+        }
+
+        .inspection-result-head {
           display: flex;
-
           align-items: center;
-
           justify-content: space-between;
-
           gap: 15px;
-
-          margin-bottom: 10px;
+          margin-bottom: 12px;
         }
 
-        .muted {
-          color: var(--text-muted);
-        }
-
-        .small {
-          font-size: 11px;
-        }
-
-        .taskrow {
+        .inspection-options {
           display: grid;
-
           grid-template-columns:
-            minmax(0, 1fr)
-            minmax(0, 1fr)
-            130px
-            auto;
+            repeat(2,minmax(0,1fr));
+          gap: 10px;
+        }
 
-          gap: 8px;
-
+        .inspection-option {
+          position: relative;
+          min-width: 0;
+          display: flex;
           align-items: center;
+          gap: 10px;
+          padding: 13px;
+          border: 1px solid #dce6df;
+          border-radius: 13px;
+          background: #ffffff;
+          cursor: pointer;
+          transition:
+            border-color .16s ease,
+            background .16s ease,
+            box-shadow .16s ease;
+        }
 
-          margin-top: 8px;
+        .inspection-option:hover {
+          border-color: #b9cfbf;
+        }
 
-          padding: 9px;
+        .inspection-option.selected {
+          border-color: #9ac9a8;
+          background: #f5fbf7;
+          box-shadow:
+            0 5px 16px
+            rgba(18,90,43,.06);
+        }
 
-          border-radius: 12px;
+        .inspection-option input {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+        }
 
-          background: #f8faf8;
+        .inspection-radio {
+          width: 22px;
+          height: 22px;
+          flex: 0 0 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1.5px solid #cbd8cf;
+          border-radius: 50%;
+          background: #ffffff;
+          color: #ffffff;
+          font-size: 11px;
+          font-weight: 800;
+        }
 
-          border:
-            1px solid #e6ece7;
+        .inspection-option.selected .inspection-radio {
+          border-color: var(--green-700);
+          background: var(--green-700);
+        }
+
+        .inspection-option-text {
+          min-width: 0;
+          flex: 1 1 auto;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .inspection-option-text strong {
+          color: var(--green-800);
+          font-size: 12px;
+        }
+
+        .inspection-option-text small {
+          margin-top: 3px;
+          color: var(--text-muted);
+          font-size: 10px;
+          line-height: 1.4;
+        }
+
+        .inspection-status {
+          flex: 0 0 auto;
+          padding: 5px 8px;
+          border-radius: 7px;
+          font-size: 9px;
+          font-weight: 800;
+          white-space: nowrap;
+        }
+
+        .inspection-status.selesai {
+          background: #e7f6eb;
+          color: var(--green-700);
+        }
+
+        .inspection-status.temuan {
+          background: #fff4df;
+          color: #a66a11;
         }
 
         /* =====================================================
-           MAP
+           FOTO BUKTI INSPEKSI
         ===================================================== */
+
+        .inspection-proof {
+          padding: 14px;
+          border: 1px solid #dce7df;
+          border-radius: 16px;
+          background: #f8fcf9;
+        }
+
+        .inspection-proof-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 15px;
+          margin-bottom: 12px;
+        }
+
+        /* =====================================================
+           TEMUAN
+        ===================================================== */
+
+        .temuan-workspace {
+          display: block;
+          width: 100%;
+        }
+
+        .temuan-selector-panel {
+          min-width: 0;
+          padding: 14px;
+          border: 1px solid #e1e9e3;
+          border-radius: 16px;
+          background: #fbfdfb;
+        }
+
+        .temuan-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 15px;
+          margin-bottom: 12px;
+        }
+
+        .temuan-count {
+          flex: 0 0 auto;
+          padding: 7px 10px;
+          border-radius: 999px;
+          background: #eaf6ee;
+          color: var(--green-700);
+          font-size: 11px;
+          font-weight: 800;
+          white-space: nowrap;
+        }
+
+        .grup-checklist {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .grup-item {
+          min-width: 0;
+          padding: 10px;
+          border: 1px solid #dce6df;
+          border-radius: 14px;
+          background: #ffffff;
+          transition:
+            border-color .16s ease,
+            background .16s ease,
+            box-shadow .16s ease;
+        }
+
+        .grup-item.checked {
+          border-color: #9ac9a8;
+          background: #f8fcf9;
+          box-shadow:
+            0 5px 16px
+            rgba(18,90,43,.06);
+        }
+
+        .grup-check {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+          padding: 7px 5px;
+          cursor: pointer;
+        }
+
+        .grup-check input {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .checkmark {
+          width: 22px;
+          height: 22px;
+          flex: 0 0 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1.5px solid #cbd8cf;
+          border-radius: 7px;
+          background: #ffffff;
+          color: #ffffff;
+          font-size: 12px;
+          font-weight: 800;
+          transition:
+            background .16s ease,
+            border-color .16s ease;
+        }
+
+        .grup-item.checked .checkmark {
+          border-color: var(--green-700);
+          background: var(--green-700);
+        }
+
+        .grup-check-text {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+        }
+
+        .grup-check-text strong {
+          color: var(--green-800);
+          font-size: 12px;
+          line-height: 1.35;
+        }
+
+        .grup-check-text small {
+          margin-top: 3px;
+          color: var(--text-muted);
+          font-size: 10px;
+        }
+
+        .grup-empty {
+          padding: 18px;
+          border: 1px dashed #cbd8cf;
+          border-radius: 13px;
+          background: #f8faf8;
+          color: var(--text-muted);
+          text-align: center;
+          font-size: 12px;
+        }
+
+        .temuan-card {
+          margin-top: 8px;
+          overflow: hidden;
+          border: 1px solid #dce7df;
+          border-radius: 13px;
+          background: #ffffff;
+          box-shadow: var(--shadow-sm);
+        }
+
+        .temuan-card-title {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 12px;
+          border-bottom: 1px solid #e5ece6;
+          background: #f7faf8;
+        }
+
+        .temuan-number {
+          width: 28px;
+          height: 28px;
+          flex: 0 0 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 9px;
+          background: #e2f2e7;
+          color: var(--green-700);
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .temuan-card-title > div:nth-child(2) {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+          flex: 1 1 auto;
+        }
+
+        .temuan-card-title strong {
+          color: var(--green-800);
+          font-size: 13px;
+        }
+
+        .temuan-card-title span {
+          margin-top: 2px;
+          color: var(--text-muted);
+          font-size: 10px;
+        }
+
+        .temuan-card-body {
+          display: grid;
+          grid-template-columns:
+            minmax(0,1.15fr)
+            minmax(300px,.85fr);
+          gap: 14px;
+          padding: 12px;
+        }
+
+        .temuan-description,
+        .temuan-photo {
+          min-width: 0;
+        }
+
+        .temuan-photo-box {
+          min-height: 100%;
+        }
+
+        .temuan-photo-box .photoactions {
+          display: grid;
+          grid-template-columns:
+            repeat(2,minmax(0,1fr));
+        }
+
+        /* =====================================================
+           STATUS OPEN / CLOSE
+        ===================================================== */
+
+        .temuan-status-box {
+          margin-top: 13px;
+          padding-top: 12px;
+          border-top: 1px solid #e4ebe6;
+        }
+
+        .temuan-status-box > label {
+          display: block;
+          margin-bottom: 7px;
+          color: #34443a;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .status-options {
+          display: grid;
+          grid-template-columns:
+            repeat(2,minmax(0,1fr));
+          gap: 8px;
+        }
+
+        .status-option {
+          position: relative;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 9px;
+          border: 1px solid #dce5de;
+          border-radius: 10px;
+          background: #ffffff;
+          cursor: pointer;
+          transition:
+            border-color .16s ease,
+            background .16s ease;
+        }
+
+        .status-option input {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .status-option.selected.open {
+          border-color: #d7b76b;
+          background: #fffaf0;
+        }
+
+        .status-option.selected.close {
+          border-color: #9ac9a8;
+          background: #f4fbf6;
+        }
+
+        .status-radio {
+          width: 20px;
+          height: 20px;
+          flex: 0 0 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1.5px solid #cbd8cf;
+          border-radius: 50%;
+          background: #ffffff;
+          color: #ffffff;
+          font-size: 10px;
+          font-weight: 800;
+        }
+
+        .status-option.selected.open .status-radio {
+          border-color: #a66a11;
+          background: #a66a11;
+        }
+
+        .status-option.selected.close .status-radio {
+          border-color: var(--green-700);
+          background: var(--green-700);
+        }
+
+        .status-option > span:last-child {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .status-option strong {
+          font-size: 11px;
+        }
+
+        .status-option.open strong {
+          color: #a66a11;
+        }
+
+        .status-option.close strong {
+          color: var(--green-700);
+        }
+
+        .status-option small {
+          margin-top: 2px;
+          color: var(--text-muted);
+          font-size: 9px;
+        }
+
+        .gps-actions {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .gps-status {
+          margin-top: 5px;
+          line-height: 1.4;
+        }
 
         .mapbox {
           overflow: hidden;
-
           border-radius: 14px;
-
-          border:
-            1px solid #dce5de;
-
+          border: 1px solid #dce5de;
           background: #f8faf8;
         }
 
         .map-info {
           display: flex;
-
           align-items: center;
-
           justify-content: space-between;
-
           gap: 15px;
-
-          padding:
-            13px
-            15px;
-
+          padding: 13px 15px;
           background: #f7faf8;
-
-          border-bottom:
-            1px solid #e1e8e3;
+          border-bottom: 1px solid #e1e8e3;
         }
 
         .coordinate-box strong {
           display: block;
-
           margin-top: 3px;
-
           color: var(--green-800);
-
           font-size: 13px;
         }
 
         .mapframe {
           display: block;
-
           width: 100%;
-
           min-height: 380px;
-
           border: 0;
         }
 
         .gps-empty {
           display: flex;
-
           align-items: center;
-
           gap: 16px;
-
-          padding:
-            30px
-            22px;
-
+          padding: 30px 22px;
           border-radius: 14px;
-
-          border:
-            1px dashed #cbd8cf;
-
+          border: 1px dashed #cbd8cf;
           background: #f8faf8;
         }
 
         .gps-empty-icon {
           width: 52px;
-
           height: 52px;
-
           flex: 0 0 52px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           border-radius: 14px;
-
           background: #e8f5eb;
-
           color: var(--green-700);
-
           font-size: 11px;
-
           font-weight: 800;
         }
 
@@ -2556,132 +3946,83 @@ export default function Inspeksi() {
         }
 
         .gps-empty p {
-          margin:
-            4px 0 0;
-
+          margin: 4px 0 0;
           color: #78867d;
-
           font-size: 12px;
-
           line-height: 1.5;
         }
 
         .gps-empty .btn {
           margin-left: auto;
-
           white-space: nowrap;
         }
 
-        /* =====================================================
-           FOTO
-        ===================================================== */
-
         .required-mark {
           margin-left: 4px;
-
           color: #cf3f3f;
         }
 
         .photo-box {
           padding: 14px;
-
           border-radius: 14px;
-
           background: #f8faf8;
-
-          border:
-            1px dashed #cbd8cf;
+          border: 1px dashed #cbd8cf;
         }
 
         .photoactions {
           display: flex;
-
           gap: 8px;
-
           flex-wrap: wrap;
         }
 
         .photo-help {
           margin-top: 9px;
-
           color: var(--text-muted);
-
           font-size: 11px;
         }
 
         .fotopreview {
           margin-top: 12px;
-
           display: flex;
-
           align-items: flex-start;
-
           gap: 12px;
         }
 
         .fotopreview img {
           width: 260px;
-
           max-width: 60%;
-
           max-height: 320px;
-
           object-fit: cover;
-
           border-radius: 12px;
-
-          border:
-            1px solid #dce5de;
+          border: 1px solid #dce5de;
         }
-
-        /* =====================================================
-           SUBMIT
-        ===================================================== */
 
         .submit-area {
           margin-top: 26px;
-
           padding-top: 22px;
-
-          border-top:
-            1px solid #e5ece6;
-
+          border-top: 1px solid #e5ece6;
           display: flex;
-
           align-items: center;
-
           justify-content: space-between;
-
           gap: 20px;
         }
 
         .submit-info {
           display: flex;
-
           align-items: center;
-
           gap: 10px;
         }
 
         .submit-check {
           width: 34px;
-
           height: 34px;
-
           flex: 0 0 34px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           border-radius: 50%;
-
           background: #e8f5eb;
-
           color: var(--green-700);
-
           font-weight: 800;
         }
 
@@ -2692,15 +4033,12 @@ export default function Inspeksi() {
 
         .submit-info strong {
           color: var(--green-800);
-
           font-size: 12px;
         }
 
         .submit-info span {
           margin-top: 3px;
-
           color: var(--text-muted);
-
           font-size: 11px;
         }
 
@@ -2714,42 +4052,68 @@ export default function Inspeksi() {
 
         .navigation-card {
           margin-top: 16px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: space-between;
-
           gap: 12px;
-
           flex-wrap: wrap;
-
           padding: 14px 16px;
-
           border-radius: 16px;
-
-          background:
-            rgba(255, 255, 255, .82);
-
+          background: rgba(255,255,255,.82);
           border: 1px solid #dfe7e1;
-
           box-shadow: var(--shadow-sm);
         }
 
         .navigation-links {
           display: flex;
-
           gap: 8px;
-
           flex-wrap: wrap;
         }
 
-        /* =====================================================
-           RESPONSIVE 900
-        ===================================================== */
+        .muted {
+          color: var(--text-muted);
+        }
+
+        .small {
+          font-size: 11px;
+        }
+
+        @media (max-width: 1100px) {
+
+          .profile-button {
+            min-width: 132px;
+          }
+
+          .nav-page {
+            padding-left: 10px;
+            padding-right: 10px;
+          }
+
+          .nav-page.active {
+            min-width: 104px;
+          }
+
+          .nav-logout {
+            padding-left: 12px;
+            padding-right: 12px;
+          }
+
+        }
 
         @media (max-width: 900px) {
+
+          .temuan-card-body {
+            grid-template-columns:
+              minmax(0,1fr);
+          }
+
+          .gps-actions {
+            justify-content: stretch;
+          }
+
+          .gps-actions .btn {
+            flex: 1 1 180px;
+          }
 
           .shell {
             padding-top: 74px;
@@ -2765,156 +4129,261 @@ export default function Inspeksi() {
 
           .hero {
             min-height: 230px;
-
             padding: 38px 36px;
           }
 
           .hero .title {
             font-size:
-              clamp(38px, 7vw, 54px);
-          }
-
-          .card {
-            padding: 24px;
-          }
-
-          .taskrow {
-            grid-template-columns:
-              1fr 1fr;
-          }
-
-          .taskrow .btn {
-            width: 100%;
+              clamp(38px,7vw,54px);
           }
 
         }
+/* CSS desktop yang sudah ada */
 
-        /* =====================================================
-           RESPONSIVE 768
-        ===================================================== */
+.mobile-menu-wrapper,
+.mobile-menu-button {
+  display: none !important;
+}
 
+@media (max-width: 768px) {
+
+  /* CSS HP kamu */
         @media (max-width: 768px) {
 
+          html,
+          body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+          }
+
           .shell {
-            padding-top: 66px !important;
+            width: 100%;
+            min-width: 0;
+            padding-top: 62px !important;
           }
 
           .topbar {
-            min-height: 66px !important;
-
-            padding: 7px 11px !important;
-
-            gap: 8px !important;
+            min-height: 62px !important;
+            padding: 7px 12px !important;
+            gap: 10px !important;
           }
 
           .brand {
-            min-width: 0 !important;
-
-            flex: 1 1 auto !important;
-
-            gap: 7px;
+            flex: 0 0 auto !important;
+            gap: 0 !important;
           }
 
           .logo {
-            width: 92px !important;
-
-            height: 43px !important;
-
-            flex-basis: 92px !important;
+            width: 82px !important;
+            height: 40px !important;
+            flex: 0 0 82px !important;
           }
 
           .logo img {
-            max-width: 92px !important;
+            width: 100% !important;
+            max-width: 82px !important;
           }
 
           .brand-text {
             display: none !important;
           }
 
-          .nav {
-            max-width: 63vw;
+         .nav {
+  position: fixed !important;
+  top: 62px !important;
+  left: 10px !important;
+  right: 10px !important;
 
-            overflow-x: auto !important;
+  display: none !important;
+  flex-direction: column !important;
 
-            overflow-y: hidden !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
 
-            scrollbar-width: none;
+  align-items: stretch !important;
+  gap: 5px !important;
 
-            gap: 4px !important;
+  padding: 10px !important;
 
-            padding-bottom: 2px;
-          }
+  background: #ffffff !important;
+  border: 1px solid #dfe7e1 !important;
+  border-radius: 14px !important;
+
+  box-shadow:
+    0 12px 30px rgba(24, 45, 32, 0.14) !important;
+
+  overflow: visible !important;
+  z-index: 1200 !important;
+}
+
+.nav.mobile-nav-open {
+  display: flex !important;
+}
+
+.mobile-menu-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+}
+
+.mobile-menu-button {
+  width: 42px !important;
+  height: 42px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 5px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  border: 1px solid #dfe7e1 !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+}
+
+.mobile-menu-button span {
+  display: block !important;
+
+  width: 20px !important;
+  height: 2px !important;
+
+  background: #087f3f !important;
+  border-radius: 999px !important;
+}
+
+.mobile-menu-button-open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg) !important;
+}
+
+.mobile-menu-button-open span:nth-child(2) {
+  opacity: 0 !important;
+}
+
+.mobile-menu-button-open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg) !important;
+}
+
+.nav .profile-wrapper,
+.nav .nav-logout {
+  display: none !important;
+}
+
+.nav .nav-page {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  padding: 10px 12px !important;
+
+  border-radius: 9px !important;
+
+  white-space: nowrap !important;
+}
+
+.nav .nav-page.active {
+  min-width: 0 !important;
+}
 
           .nav::-webkit-scrollbar {
             display: none;
           }
 
-          .nav a,
-          .nav-maintenance,
-          .nav-login,
+          .nav-page,
           .nav-logout {
             flex: 0 0 auto !important;
+            padding: 7px 8px !important;
+            font-family: "Poppins", sans-serif !important;
+            font-size: 9px !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+          }
 
-            padding:
-              8px 9px !important;
+          .nav-page.active {
+            min-width: auto !important;
+          }
 
-            font-size: 10px !important;
+          .profile-wrapper {
+            flex: 0 0 auto !important;
+          }
 
+          .profile-button {
+            min-width: 84px !important;
+            width: 84px !important;
+            height: 36px !important;
+            padding: 3px 6px 3px 4px !important;
+            gap: 5px !important;
             border-radius: 9px !important;
           }
 
-          .nav-logout {
-            color: #a12d2d !important;
-
-            background: #fff5f5 !important;
+          .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            flex-basis: 28px !important;
+            font-size: 11px !important;
           }
 
-          .nav a.active::after {
-            left: 9px;
+          .profile-info strong {
+            font-size: 8px !important;
+          }
 
-            right: 9px;
+          .profile-info small {
+            margin-top: 2px !important;
+            font-size: 6px !important;
+          }
 
-            bottom: 3px;
+          .profile-chevron {
+            font-size: 6px !important;
+          }
+
+          .profile-popup {
+            position: fixed !important;
+            top: 61px !important;
+            right: 10px !important;
+            width: min(298px,calc(100vw - 20px)) !important;
+          }
+
+          .nav-logout {
+            min-height: 36px !important;
+            padding: 7px 9px !important;
           }
 
           .main {
             width: 100% !important;
-
-            padding: 12px !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 10px 12px 32px !important;
           }
 
           .hero {
-            width: 100% !important;
-
-            min-height: 195px !important;
-
-            padding: 28px 24px !important;
-
-            border-radius: 20px !important;
-
-            justify-content: flex-start !important;
-
-            text-align: left !important;
+            min-height: 170px !important;
+            padding: 24px 20px !important;
+            border-radius: 18px !important;
           }
 
           .hero::before {
-            width: 230px;
-
-            height: 230px;
-
-            right: -110px;
-
-            top: -100px;
+            width: 190px;
+            height: 190px;
+            right: -90px;
+            top: -85px;
           }
 
           .hero::after {
-            width: 160px;
-
-            height: 160px;
-
-            right: 40px;
-
-            bottom: -110px;
+            width: 130px;
+            height: 130px;
+            right: 25px;
+            bottom: -95px;
           }
 
           .hero-decoration-one {
@@ -2922,278 +4391,267 @@ export default function Inspeksi() {
           }
 
           .hero-decoration-two {
-            right: 40px;
-
-            bottom: 28px;
-          }
-
-          .hero-content-left {
-            width: 100% !important;
-
-            text-align: left !important;
+            right: 26px;
+            bottom: 22px;
           }
 
           .hero .eyebrow {
-            font-size: 9px !important;
-
-            margin-bottom: 10px !important;
-
-            padding: 6px 11px !important;
+            margin-bottom: 8px !important;
+            padding: 5px 9px !important;
+            font-size: 8px !important;
           }
 
           .hero .title {
             font-size:
-              clamp(30px, 8vw, 42px) !important;
-
-            line-height: 1.05 !important;
-
-            text-align: left !important;
-
-            white-space: normal !important;
-
-            overflow-wrap: anywhere !important;
+              clamp(27px,8vw,36px) !important;
+            line-height: 1.08 !important;
           }
 
           .hero-subtitle {
-            margin-top: 10px !important;
-
-            font-size: 12px !important;
-
-            line-height: 1.45 !important;
+            margin-top: 8px !important;
+            font-size: 11px !important;
+            line-height: 1.4 !important;
           }
 
           .notice,
           .error {
-            margin-top: 12px;
-
-            padding: 11px 13px;
-
-            border-radius: 11px;
-
-            font-size: 12px;
+            margin-top: 10px !important;
+            padding: 9px 11px !important;
+            border-radius: 10px !important;
+            font-size: 11px !important;
           }
 
           .card {
             width: 100% !important;
-
             max-width: 100% !important;
-
-            padding: 18px !important;
-
-            border-radius: 18px !important;
-
-            margin-top: 12px;
+            margin-top: 10px !important;
+            padding: 16px !important;
+            border-radius: 16px !important;
           }
 
           .form-section-title {
-            margin-bottom: 18px;
-
-            font-size: 11px;
+            margin-bottom: 15px !important;
+            font-size: 10px !important;
           }
 
           .formgrid {
-            grid-template-columns: 1fr !important;
-
-            gap: 15px !important;
+            grid-template-columns:
+              minmax(0,1fr) !important;
+            gap: 12px !important;
           }
 
           .field,
-          .field.full {
+          .field.full,
+          .search-select-wrapper {
             width: 100% !important;
-
-            grid-column: 1 / -1 !important;
-
             min-width: 0 !important;
+            max-width: 100% !important;
+            grid-column: 1 / -1 !important;
           }
 
-          .field label {
-            font-size: 13px;
+          .field label,
+          .search-select-label {
+            margin-bottom: 6px !important;
+            font-size: 12px !important;
           }
 
           input,
           select,
           textarea {
-            padding: 11px 12px;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            padding: 10px 12px !important;
+            font-size: 12px !important;
+          }
 
-            font-size: 13px;
+          textarea {
+            min-height: 105px !important;
           }
 
           .selectrow {
-            flex-wrap: wrap !important;
+            width: 100% !important;
+            display: grid !important;
+            grid-template-columns:
+              minmax(0,1fr)
+              minmax(0,1fr) !important;
+            align-items: stretch !important;
+            gap: 7px !important;
           }
 
           .selectrow > * {
             min-width: 0 !important;
+            max-width: 100% !important;
           }
 
           .selectrow > :first-child {
-            width: 100%;
-
-            flex: 1 1 100%;
+            width: 100% !important;
+            grid-column: 1 / -1 !important;
           }
 
           .selectrow .btn {
-            flex: 1 1 0;
-
-            min-width: 0;
-          }
-
-          .taskhead {
-            align-items: stretch !important;
-
-            flex-wrap: wrap !important;
-
-            gap: 9px !important;
-          }
-
-          .taskhead .btn {
-            width: 100%;
-          }
-
-          .taskrow {
-            grid-template-columns: 1fr !important;
-
-            gap: 7px !important;
-
-            padding: 8px !important;
-          }
-
-          .taskrow > * {
             width: 100% !important;
-
             min-width: 0 !important;
+            min-height: 40px !important;
+            padding: 9px 8px !important;
+            font-size: 11px !important;
+            white-space: nowrap !important;
           }
 
-          .map-info {
+          .inlinebox {
+            width: 100% !important;
+          }
+
+          .inlinebox .actions {
+            display: grid !important;
+            grid-template-columns:
+              repeat(2,minmax(0,1fr)) !important;
+            gap: 7px !important;
+          }
+
+          .inlinebox .actions .btn {
+            width: 100% !important;
+          }
+
+          .location-count {
+            padding: 9px 11px !important;
+            font-size: 11px !important;
+          }
+
+         .inspection-options {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+.inspection-option {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+}
+
+          .inspection-status {
+            margin-left: auto;
+          }
+
+          .inspection-proof-head {
+            align-items: flex-start !important;
+          }
+
+          .temuan-head {
             align-items: stretch !important;
-
             flex-direction: column !important;
+            gap: 7px !important;
           }
 
-          .map-info .btn {
-            width: 100%;
+          .temuan-count {
+            align-self: flex-start !important;
           }
 
-          .mapframe {
-            min-height: 280px !important;
+          .temuan-card-title {
+            align-items: flex-start !important;
           }
 
-          .gps-empty {
-            padding: 25px 15px;
+          .temuan-card-title .btn {
+            margin-left: auto !important;
           }
+
+          .temuan-card-body {
+            grid-template-columns:
+              minmax(0,1fr) !important;
+            padding: 11px !important;
+            gap: 11px !important;
+          }
+
+          .status-options {
+            grid-template-columns:
+              minmax(0,1fr) !important;
+          }
+          
+        .map-info {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+         .gps-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  width: 100% !important;
+  gap: 7px !important;
+}
+
+.gps-actions .btn {
+  width: 100% !important;
+}
 
           .photoactions {
-            width: 100% !important;
-
             display: grid !important;
-
             grid-template-columns:
-              repeat(2, minmax(0, 1fr)) !important;
-
-            gap: 8px !important;
+              repeat(2,minmax(0,1fr)) !important;
+            gap: 7px !important;
           }
 
           .photoactions .btn {
             width: 100% !important;
-
             min-width: 0 !important;
-
-            padding: 11px 5px !important;
-
-            font-size: 11px !important;
-
+            min-height: 40px !important;
+            padding: 9px 6px !important;
+            font-size: 10px !important;
             white-space: nowrap !important;
           }
 
           .fotopreview {
             width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 8px !important;
+          }
 
-            display: flex;
-
-            flex-direction: column;
-
-            align-items: stretch;
-
-            gap: 9px;
+          .fotopreview img,
+          .fotopreview .btn {
+            width: 100% !important;
+            max-width: 100% !important;
           }
 
           .fotopreview img {
-            width: 100% !important;
-
-            max-width: 100% !important;
-
-            max-height: 300px;
-          }
-
-          .fotopreview .btn {
-            width: 100%;
+            max-height: 280px !important;
           }
 
           .submit-area {
-            margin-top: 20px;
-
-            padding-top: 17px;
-
-            flex-direction: column;
-
-            align-items: stretch;
-
-            gap: 14px;
-          }
-
-          .submit-info {
-            align-items: flex-start;
+            margin-top: 18px !important;
+            padding-top: 15px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
           }
 
           .submit-btn {
-            width: 100%;
-
-            min-width: 0;
+            width: 100% !important;
           }
 
           .navigation-card {
             width: 100% !important;
-
-            margin-top: 12px;
-
-            padding: 10px !important;
-
+            margin-top: 10px !important;
+            padding: 8px !important;
             display: grid !important;
-
             grid-template-columns:
-              repeat(2, minmax(0, 1fr)) !important;
-
+              repeat(2,minmax(0,1fr)) !important;
             gap: 7px !important;
-
-            align-items: stretch !important;
           }
 
-          .navigation-card > .btn {
+          .navigation-card > .btn,
+          .navigation-links .btn {
             width: 100% !important;
-
             min-width: 0 !important;
-
-            margin: 0 !important;
-
-            padding: 10px 7px !important;
-
-            font-size: 11px !important;
+            padding: 9px 6px !important;
+            font-size: 10px !important;
           }
 
           .navigation-links {
-            width: 100% !important;
-
             display: contents !important;
-          }
-
-          .navigation-links .btn {
-            width: 100% !important;
-
-            min-width: 0 !important;
-
-            padding: 10px 7px !important;
-
-            font-size: 11px !important;
           }
 
           .navigation-links .btn:last-child {
@@ -3204,225 +4662,109 @@ export default function Inspeksi() {
           select,
           textarea,
           button {
-            max-width: 100%;
+            max-width: 100% !important;
           }
 
         }
-
-        /* =====================================================
-           RESPONSIVE 480
-        ===================================================== */
 
         @media (max-width: 480px) {
-
-          .shell {
-            padding-top: 60px !important;
-          }
-
-          .topbar {
-            min-height: 60px !important;
-
-            padding: 7px 8px !important;
-          }
-
-          .logo {
-            width: 82px !important;
-
-            height: 39px !important;
-
-            flex-basis: 82px !important;
-          }
-
-          .logo img {
-            max-width: 82px !important;
-          }
-
-          .nav {
-            max-width: 66vw !important;
-
-            gap: 3px !important;
-          }
-
-          .nav a,
-          .nav-maintenance,
-          .nav-login,
-          .nav-logout {
-            padding: 7px 6px !important;
-
-            font-size: 9px !important;
-          }
-
-          .main {
-            padding: 9px !important;
-          }
-
-          .hero {
-            min-height: 172px !important;
-
-            padding: 23px 19px !important;
-
-            border-radius: 17px !important;
-          }
-
-          .hero .eyebrow {
-            font-size: 8px !important;
-
-            padding: 5px 9px !important;
-          }
-
-          .hero .title {
-            font-size: 29px !important;
-          }
-
-          .hero-subtitle {
-            font-size: 11px !important;
-          }
-
-          .card {
-            padding: 14px !important;
-
-            border-radius: 16px !important;
-          }
-
-          .form-section-title {
-            margin-bottom: 15px;
-          }
-
-          .field label {
-            font-size: 13px !important;
-          }
-
-          .selectrow {
-            gap: 6px;
-          }
-
-          .selectrow .btn {
-            padding: 10px 6px;
-
-            font-size: 11px;
-          }
-
-          .mapframe {
-            min-height: 250px !important;
-          }
-
-          .photoactions {
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr)) !important;
-
-            gap: 7px !important;
-          }
-
-          .photoactions .btn {
-            font-size: 10px !important;
-
-            padding: 10px 4px !important;
-          }
-
-          .navigation-card {
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr)) !important;
-
-            gap: 6px !important;
-
-            padding: 8px !important;
-          }
-
-          .navigation-card > .btn,
-          .navigation-links .btn {
-            font-size: 10px !important;
-
-            padding: 9px 4px !important;
-          }
-
-          .submit-info {
-            gap: 8px;
-          }
-
-          .submit-check {
-            width: 28px;
-
-            height: 28px;
-
-            flex-basis: 28px;
-          }
-
-        }
-
-        /* =====================================================
-           RESPONSIVE 390
-        ===================================================== */
-
-        @media (max-width: 390px) {
 
           .shell {
             padding-top: 58px !important;
           }
 
+          .topbar {
+            min-height: 58px !important;
+            padding: 6px 9px !important;
+          }
+
           .logo {
-            width: 74px !important;
-
-            height: 36px !important;
-
-            flex-basis: 74px !important;
+            width: 76px !important;
+            height: 37px !important;
+            flex-basis: 76px !important;
           }
 
           .logo img {
-            max-width: 74px !important;
+            max-width: 76px !important;
           }
 
-          .nav {
-            max-width: 69vw !important;
-          }
-
-          .nav a,
-          .nav-maintenance,
-          .nav-login,
+          .nav-page,
           .nav-logout {
-            padding: 6px 5px !important;
-
+            padding: 6px 7px !important;
+            font-family: "Poppins", sans-serif !important;
             font-size: 8px !important;
+            font-weight: 600 !important;
           }
 
-          .hero {
-            min-height: 158px !important;
-
-            padding: 21px 17px !important;
+          .profile-button {
+            min-width: 78px !important;
+            width: 78px !important;
           }
 
-          .hero .title {
-            font-size: 26px !important;
+          .profile-popup {
+            top: 57px !important;
           }
 
-          .hero-subtitle {
-            font-size: 10px !important;
+          .main {
+            padding: 8px 10px 28px !important;
           }
 
-          .photoactions {
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr)) !important;
+          .card {
+            padding: 14px !important;
+          }
 
+          .formgrid {
+            gap: 11px !important;
+          }
+
+          .selectrow {
             gap: 6px !important;
           }
 
-          .photoactions .btn {
-            font-size: 9px !important;
+        }
 
-            padding: 9px 3px !important;
+        @media (max-width: 390px) {
+
+          .logo {
+            width: 70px !important;
+            height: 34px !important;
+            flex-basis: 70px !important;
           }
 
-          .navigation-card {
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr)) !important;
-
-            gap: 5px !important;
+          .logo img {
+            max-width: 70px !important;
           }
 
-          .navigation-card > .btn,
-          .navigation-links .btn {
-            font-size: 9px !important;
+          .nav-page,
+          .nav-logout {
+            padding: 6px 5px !important;
+            font-family: "Poppins", sans-serif !important;
+            font-size: 8px !important;
+            font-weight: 600 !important;
+          }
 
-            padding: 9px 3px !important;
+          .profile-button {
+            min-width: 73px !important;
+            width: 73px !important;
+            padding-right: 4px !important;
+          }
+
+          .profile-avatar {
+            width: 26px !important;
+            height: 26px !important;
+            flex-basis: 26px !important;
+          }
+
+          .profile-info strong {
+            font-size: 7px !important;
+          }
+
+          .profile-info small {
+            font-size: 5px !important;
+          }
+
+          .card {
+            padding: 12px !important;
           }
 
         }

@@ -9,8 +9,6 @@ import {
   WilayahBar,
 } from "@/components/Charts";
 
-const WILAYAH_OPSI = [1, 2, 3, 4, 5, 6, 7];
-
 function localDate() {
   const d = new Date();
 
@@ -37,10 +35,7 @@ function monthRange(month) {
 
   return {
     from: `${y}-${String(m).padStart(2, "0")}-01`,
-    to: `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(
-      2,
-      "0"
-    )}`,
+    to: `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`,
   };
 }
 
@@ -261,6 +256,87 @@ function CloseIcon() {
 }
 
 /* =========================================================
+   CALENDAR ICON
+========================================================= */
+
+function CalendarIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="3.5"
+        y="5"
+        width="17"
+        height="15"
+        rx="2.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+
+      <path
+        d="M7 3.5V7M17 3.5V7M3.5 9.5H20.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/* =========================================================
+   REFRESH ICON
+========================================================= */
+
+function RefreshIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 11A8.1 8.1 0 0 0 5.3 6.2L3.5 8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M3.5 4.5V8H7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M4 13A8.1 8.1 0 0 0 18.7 17.8L20.5 16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M20.5 19.5V16H17"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/* =========================================================
    PROFILE DATA
 ========================================================= */
 
@@ -366,7 +442,10 @@ export default function Dashboard() {
   const [monthly, setMonthly] = useState([]);
   const [groups, setGroups] = useState([]);
   const [wilayah, setWilayah] = useState([]);
+  const [masterWilayah, setMasterWilayah] = useState([]);
   const [openList, setOpenList] = useState([]);
+
+  const [selectedOpen, setSelectedOpen] = useState(null);
 
   const [scope, setScope] = useState("all");
 
@@ -385,10 +464,6 @@ export default function Dashboard() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  /* =======================================================
-     PROFILE STATE
-  ======================================================= */
-
   const [profileOpen, setProfileOpen] =
     useState(false);
 
@@ -399,10 +474,6 @@ export default function Dashboard() {
 
   const profileRef = useRef(null);
 
-  /* =======================================================
-     LOAD USER
-  ======================================================= */
-
   useEffect(() => {
     const storedUser = getStoredUser();
 
@@ -410,10 +481,6 @@ export default function Dashboard() {
       setUser(storedUser);
     }
   }, []);
-
-  /* =======================================================
-     CLOSE PROFILE WHEN CLICK OUTSIDE
-  ======================================================= */
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -440,10 +507,6 @@ export default function Dashboard() {
     };
   }, [profileOpen]);
 
-  /* =======================================================
-     ESC TO CLOSE PROFILE
-  ======================================================= */
-
   useEffect(() => {
     function handleEscape(event) {
       if (event.key === "Escape") {
@@ -465,6 +528,28 @@ export default function Dashboard() {
       );
     };
   }, [profileOpen]);
+
+  useEffect(() => {
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setSelectedOpen(null);
+      }
+    }
+
+    if (selectedOpen) {
+      document.addEventListener(
+        "keydown",
+        handleEscape
+      );
+    }
+
+    return () => {
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, [selectedOpen]);
 
   function activeRange() {
     if (scope === "day") {
@@ -490,6 +575,43 @@ export default function Dashboard() {
       to: "",
     };
   }
+
+  useEffect(() => {
+    async function loadMasterWilayah() {
+      try {
+        const response = await fetch(
+          "/api/master/wilayah",
+          {
+            cache: "no-store",
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+              "Gagal memuat master wilayah."
+          );
+        }
+
+        setMasterWilayah(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Load master wilayah error:",
+          error
+        );
+
+        setMasterWilayah([]);
+      }
+    }
+
+    loadMasterWilayah();
+  }, []);
 
   function queryString() {
     const {
@@ -624,7 +746,24 @@ export default function Dashboard() {
 
       setOpenList(
         Array.isArray(values[4])
-          ? values[4]
+          ? [...values[4]].sort((a, b) => {
+              const dateA = new Date(
+                a?.tanggal_temuan || 0
+              ).getTime();
+
+              const dateB = new Date(
+                b?.tanggal_temuan || 0
+              ).getTime();
+
+              if (dateB !== dateA) {
+                return dateB - dateA;
+              }
+
+              return (
+                Number(b?.id_temuan || 0) -
+                Number(a?.id_temuan || 0)
+              );
+            })
           : []
       );
     } catch (error) {
@@ -650,70 +789,6 @@ export default function Dashboard() {
 
   function refreshData() {
     load();
-  }
-
-  function exportDashboard(format) {
-    const {
-      from: activeFrom,
-      to: activeTo,
-    } = activeRange();
-
-    if (
-      (
-        scope === "range" ||
-        scope === "day" ||
-        scope === "month"
-      ) &&
-      (!activeFrom || !activeTo)
-    ) {
-      setErr(
-        "Lengkapi periode export terlebih dahulu."
-      );
-
-      return;
-    }
-
-    if (
-      activeFrom &&
-      activeTo &&
-      activeFrom > activeTo
-    ) {
-      setErr(
-        "Tanggal dari tidak boleh lebih besar dari tanggal sampai."
-      );
-
-      return;
-    }
-
-    const params = new URLSearchParams({
-      format,
-    });
-
-    if (activeFrom) {
-      params.set(
-        "from",
-        activeFrom
-      );
-    }
-
-    if (activeTo) {
-      params.set(
-        "to",
-        activeTo
-      );
-    }
-
-    if (noWilayah) {
-      params.set(
-        "noWilayah",
-        noWilayah
-      );
-    }
-
-    window.open(
-      `/api/dashboard/export?${params.toString()}`,
-      "_blank"
-    );
   }
 
   const pie = useMemo(
@@ -743,6 +818,234 @@ export default function Dashboard() {
       )
       .slice(0, 5);
   }, [groups]);
+
+  const wilayahDisplay = useMemo(() => {
+    const master = Array.isArray(masterWilayah)
+      ? masterWilayah
+      : [];
+
+    const dataWilayah = Array.isArray(wilayah)
+      ? wilayah
+      : [];
+
+    function getLabel(row) {
+      return (
+        row?.nama_wilayah ||
+        row?.nama ||
+        row?.label ||
+        row?.wilayah ||
+        (
+          row?.no_wilayah !== undefined &&
+          row?.no_wilayah !== null &&
+          String(row?.no_wilayah).trim() !== ""
+            ? `Wilayah ${row.no_wilayah}`
+            : "-"
+        )
+      );
+    }
+
+    function getNumber(row, fields) {
+      for (const field of fields) {
+        const value = Number(row?.[field]);
+
+        if (
+          Number.isFinite(value) &&
+          value !== 0
+        ) {
+          return value;
+        }
+      }
+
+      return 0;
+    }
+
+    function getTotal(row) {
+      return getNumber(row, [
+        "total",
+        "jumlah",
+        "jumlah_temuan",
+        "count",
+      ]);
+    }
+
+    function getOpen(row) {
+      return getNumber(row, [
+        "open",
+        "jumlah_open",
+        "open_07_hari",
+        "open_0_7_hari",
+      ]);
+    }
+
+    function getClose(row) {
+      return getNumber(row, [
+        "close",
+        "jumlah_close",
+      ]);
+    }
+
+    function getDisplayKey(row) {
+      const label = String(
+        getLabel(row) || "-"
+      )
+        .trim()
+        .replace(/\s+/g, " ");
+
+      return label.toLowerCase();
+    }
+
+    const hasil = [];
+    const indexMap = new Map();
+
+    function addOrMerge(row, source) {
+      const label = String(
+        getLabel(row) || "-"
+      )
+        .trim()
+        .replace(/\s+/g, " ");
+
+      if (!label || label === "-") {
+        return;
+      }
+
+      const key = getDisplayKey(row);
+
+      const total = getTotal(row);
+      const open = getOpen(row);
+      const close = getClose(row);
+
+      const existingIndex =
+        indexMap.get(key);
+
+      if (
+        existingIndex !== undefined
+      ) {
+        const existing =
+          hasil[existingIndex];
+
+        existing.total =
+          Number(existing.total || 0) +
+          total;
+
+        existing.jumlah =
+          Number(existing.jumlah || 0) +
+          total;
+
+        existing.jumlah_temuan =
+          Number(
+            existing.jumlah_temuan || 0
+          ) + total;
+
+        existing.open =
+          Number(existing.open || 0) +
+          open;
+
+        existing.jumlah_open =
+          Number(
+            existing.jumlah_open || 0
+          ) + open;
+
+        existing.close =
+          Number(existing.close || 0) +
+          close;
+
+        existing.jumlah_close =
+          Number(
+            existing.jumlah_close || 0
+          ) + close;
+
+        if (source === "data") {
+          Object.assign(
+            existing,
+            row
+          );
+
+          existing.wilayah =
+            label;
+
+          existing.nama_wilayah =
+            label;
+
+          existing.total =
+            Number(
+              existing.total ?? 
+                existing.jumlah ??
+                0
+            );
+
+          existing.jumlah =
+            existing.total;
+
+          existing.jumlah_temuan =
+            existing.total;
+
+          existing.open =
+            Number(
+              existing.open ??
+                existing.jumlah_open ??
+                0
+            );
+
+          existing.jumlah_open =
+            existing.open;
+
+          existing.close =
+            Number(
+              existing.close ??
+                existing.jumlah_close ??
+                0
+            );
+
+          existing.jumlah_close =
+            existing.close;
+        }
+
+        return;
+      }
+
+      const item = {
+        ...row,
+
+        wilayah: label,
+
+        nama_wilayah: label,
+
+        total,
+
+        jumlah: total,
+
+        jumlah_temuan: total,
+
+        open,
+
+        jumlah_open: open,
+
+        close,
+
+        jumlah_close: close,
+      };
+
+      indexMap.set(
+        key,
+        hasil.length
+      );
+
+      hasil.push(item);
+    }
+
+    master.forEach((item) => {
+      addOrMerge(item, "master");
+    });
+
+    dataWilayah.forEach((item) => {
+      addOrMerge(item, "data");
+    });
+
+    return hasil;
+  }, [
+    masterWilayah,
+    wilayah,
+  ]);
 
   const displayPeriod = useMemo(() => {
     if (scope === "day") {
@@ -810,15 +1113,12 @@ export default function Dashboard() {
 
         </div>
 
-
         <nav
           className="nav"
           aria-label="Navigasi utama"
         >
 
-          <Link
-            href="/inspeksi"
-          >
+          <Link href="/inspeksi">
             Form Inspeksi
           </Link>
 
@@ -829,16 +1129,9 @@ export default function Dashboard() {
             Dashboard
           </Link>
 
-          <Link
-            href="/temuan"
-          >
+          <Link href="/temuan">
             Data Temuan
           </Link>
-
-
-          {/* =================================================
-              PROFILE
-          ================================================= */}
 
           <div
             className="profile-container"
@@ -882,11 +1175,6 @@ export default function Dashboard() {
 
             </button>
 
-
-            {/* =================================================
-                PROFILE POPUP
-            ================================================= */}
-
             {profileOpen && (
 
               <div
@@ -920,13 +1208,11 @@ export default function Dashboard() {
 
                 </div>
 
-
                 <div className="profile-popup-body">
 
                   <div className="profile-large-avatar">
                     {initial}
                   </div>
-
 
                   <div className="profile-info">
 
@@ -947,7 +1233,6 @@ export default function Dashboard() {
                       </div>
 
                     </div>
-
 
                     <div className="profile-info-item">
 
@@ -971,7 +1256,6 @@ export default function Dashboard() {
                             stroke="currentColor"
                             strokeWidth="1.8"
                             strokeLinecap="round"
-                            strokeLinejoin="round"
                           />
                         </svg>
                       </span>
@@ -992,7 +1276,6 @@ export default function Dashboard() {
 
                 </div>
 
-
                 <div className="profile-popup-footer">
 
                   <span className="profile-status-dot" />
@@ -1009,7 +1292,6 @@ export default function Dashboard() {
 
           </div>
 
-
           <button
             type="button"
             className="nav-logout"
@@ -1024,11 +1306,6 @@ export default function Dashboard() {
         </nav>
 
       </header>
-
-
-      {/* =====================================================
-          MAIN CONTENT
-      ===================================================== */}
 
       <section className="k3d-content">
 
@@ -1052,11 +1329,6 @@ export default function Dashboard() {
 
           </div>
         )}
-
-
-        {/* =====================================================
-            FILTER
-        ===================================================== */}
 
         <div className="k3d-filter-row">
 
@@ -1091,7 +1363,6 @@ export default function Dashboard() {
 
           </div>
 
-
           {scope === "day" && (
             <div className="k3d-filter-group">
 
@@ -1112,7 +1383,6 @@ export default function Dashboard() {
             </div>
           )}
 
-
           {scope === "month" && (
             <div className="k3d-filter-group">
 
@@ -1132,7 +1402,6 @@ export default function Dashboard() {
 
             </div>
           )}
-
 
           {scope === "range" && (
             <>
@@ -1155,7 +1424,6 @@ export default function Dashboard() {
 
               </div>
 
-
               <div className="k3d-filter-group">
 
                 <label>
@@ -1177,7 +1445,6 @@ export default function Dashboard() {
             </>
           )}
 
-
           <div className="k3d-filter-group">
 
             <label>
@@ -1197,21 +1464,41 @@ export default function Dashboard() {
                 Semua Wilayah
               </option>
 
-              {WILAYAH_OPSI.map(
-                (number) => (
-                  <option
-                    key={number}
-                    value={number}
-                  >
-                    Wilayah {number}
-                  </option>
-                )
+              {masterWilayah.map(
+                (item, index) => {
+                  const value =
+                    item?.no_wilayah ??
+                    item?.id_wilayah ??
+                    item?.id ??
+                    "";
+
+                  const label =
+                    item?.nama_wilayah ||
+                    item?.nama ||
+                    item?.label ||
+                    (value
+                      ? `Wilayah ${value}`
+                      : "Wilayah");
+
+                  return (
+                    <option
+                      key={`${value}-${index}`}
+                      value={value}
+                    >
+                      {label}
+                    </option>
+                  );
+                }
               )}
 
             </select>
 
           </div>
 
+          {/* =================================================
+              TOMBOL AKSI
+              PDF & EXCEL DIHAPUS
+          ================================================= */}
 
           <div className="k3d-filter-actions">
 
@@ -1226,40 +1513,20 @@ export default function Dashboard() {
                 : "Terapkan"}
             </button>
 
-
-            <button
-              type="button"
-              className="k3d-export-button"
-              onClick={() =>
-                exportDashboard(
-                  "xlsx"
-                )
-              }
-            >
-              ↓ Excel
-            </button>
-
-
-            <button
-              type="button"
-              className="k3d-export-button"
-              onClick={() =>
-                exportDashboard(
-                  "pdf"
-                )
-              }
-            >
-              ↓ PDF
-            </button>
+           <button
+  type="button"
+  className="k3d-refresh-button"
+  onClick={refreshData}
+  disabled={loading}
+  title="Refresh Data"
+  aria-label="Refresh Data"
+>
+  <RefreshIcon />
+</button>
 
           </div>
 
         </div>
-
-
-        {/* =====================================================
-            SUMMARY CARDS
-        ===================================================== */}
 
         <section className="k3d-summary-grid">
 
@@ -1295,7 +1562,6 @@ export default function Dashboard() {
 
           </article>
 
-
           <article className="k3d-summary-card k3d-summary-orange">
 
             <div className="k3d-summary-top">
@@ -1327,7 +1593,6 @@ export default function Dashboard() {
             <div className="k3d-wave k3d-wave-orange" />
 
           </article>
-
 
           <article className="k3d-summary-card k3d-summary-green">
 
@@ -1361,7 +1626,6 @@ export default function Dashboard() {
 
           </article>
 
-
           <article className="k3d-summary-card k3d-summary-dark">
 
             <div className="k3d-summary-top">
@@ -1393,7 +1657,6 @@ export default function Dashboard() {
             <div className="k3d-wave k3d-wave-dark" />
 
           </article>
-
 
           <article className="k3d-summary-card k3d-summary-rate">
 
@@ -1429,11 +1692,6 @@ export default function Dashboard() {
 
         </section>
 
-
-        {/* =====================================================
-            STATUS + GROUP
-        ===================================================== */}
-
         <section className="k3d-two-column">
 
           <article className="k3d-panel k3d-status-panel">
@@ -1450,7 +1708,6 @@ export default function Dashboard() {
 
             </div>
 
-
             <div className="k3d-status-content">
 
               <div className="k3d-chart-area">
@@ -1458,7 +1715,6 @@ export default function Dashboard() {
                   data={pie}
                 />
               </div>
-
 
               <div className="k3d-status-legend">
 
@@ -1483,7 +1739,6 @@ export default function Dashboard() {
 
                 </div>
 
-
                 <div className="k3d-legend-row">
 
                   <span className="k3d-dot k3d-dot-green" />
@@ -1504,7 +1759,6 @@ export default function Dashboard() {
                   </div>
 
                 </div>
-
 
                 <div className="k3d-legend-row">
 
@@ -1533,7 +1787,6 @@ export default function Dashboard() {
 
           </article>
 
-
           <article className="k3d-panel k3d-group-panel">
 
             <div className="k3d-panel-heading">
@@ -1547,7 +1800,6 @@ export default function Dashboard() {
               </p>
 
             </div>
-
 
             <div className="k3d-table-scroll">
 
@@ -1582,7 +1834,6 @@ export default function Dashboard() {
                   </tr>
 
                 </thead>
-
 
                 <tbody>
 
@@ -1646,7 +1897,6 @@ export default function Dashboard() {
                     )
                   )}
 
-
                   {sortedGroups.length === 0 && (
 
                     <tr>
@@ -1672,11 +1922,6 @@ export default function Dashboard() {
 
         </section>
 
-
-        {/* =====================================================
-            MONTHLY + WILAYAH
-        ===================================================== */}
-
         <section className="k3d-two-column k3d-bottom-row">
 
           <article className="k3d-panel">
@@ -1695,28 +1940,18 @@ export default function Dashboard() {
 
               </div>
 
+             <div className="k3d-chart-legend">
+  <span>
+    <i className="k3d-chart-orange" />
+    Open
+  </span>
 
-              <div className="k3d-chart-legend">
-
-                <span>
-                  <i className="k3d-chart-blue" />
-                  Total
-                </span>
-
-                <span>
-                  <i className="k3d-chart-orange" />
-                  Open
-                </span>
-
-                <span>
-                  <i className="k3d-chart-green" />
-                  Close
-                </span>
-
-              </div>
-
+  <span>
+    <i className="k3d-chart-green" />
+    Close
+  </span>
+</div>
             </div>
-
 
             <div className="k3d-chart-large">
               <MonthlyBar
@@ -1726,76 +1961,115 @@ export default function Dashboard() {
 
           </article>
 
+          <article className="k3d-panel k3d-wilayah-panel">
 
-          <article className="k3d-panel">
+  <div className="k3d-wilayah-heading-row">
 
-            <div className="k3d-panel-heading">
+    <div className="k3d-panel-heading">
 
-              <h2>
-                Temuan Per Wilayah
-              </h2>
+      <h2>
+        Temuan Per Wilayah
+      </h2>
 
-              <p>
-                Perbandingan temuan pada seluruh wilayah kerja
-              </p>
+      <p>
+        Perbandingan temuan pada seluruh wilayah kerja
+      </p>
 
-            </div>
+    </div>
 
+    <div className="k3d-wilayah-legend">
 
-            <div className="k3d-chart-large">
-              <WilayahBar
-                data={wilayah}
-              />
-            </div>
+      <span>
+        <i className="k3d-chart-orange" />
+        Open
+      </span>
 
+      <span>
+        <i className="k3d-chart-green" />
+        Close
+      </span>
 
-            <div className="k3d-wilayah-list">
+    </div>
 
-              {WILAYAH_OPSI.map(
-                (number) => {
+  </div>
 
-                  const row =
-                    wilayah.find(
-                      (item) =>
-                        Number(
-                          item?.no_wilayah
-                        ) === number
-                    );
+  <div className="k3d-wilayah-chart-wrapper">
 
-                  return (
-                    <div
-                      key={number}
-                      className="k3d-wilayah-item"
-                    >
+    <WilayahBar
+      data={wilayahDisplay}
+    />
 
-                      <strong>
-                        Wilayah {number}
-                      </strong>
+  </div>
 
-                      <span>
-                        {formatNumber(
-                          row?.jumlah ??
-                            row?.total ??
-                            row?.jumlah_temuan ??
-                            0
-                        )}
-                      </span>
+  <div className="k3d-wilayah-summary-list">
 
-                    </div>
-                  );
-                }
-              )}
+  {wilayahDisplay
+    .filter((item) => {
 
-            </div>
+      const namaWilayah =
+        getWilayahName(item);
 
-          </article>
+      return (
+        String(namaWilayah)
+          .trim()
+          .toLowerCase() !== "mixer"
+      );
 
+    })
+    .map((item, index) => {
+
+      const namaWilayah =
+        getWilayahName(item);
+
+      const totalWilayah =
+        Number(
+          item?.jumlah ??
+            item?.total ??
+            item?.jumlah_temuan ??
+            0
+        );
+
+      const warnaTitik =
+        index >= 5
+          ? "orange"
+          : "green";
+
+      return (
+        <div
+          key={`${String(
+            namaWilayah
+          ).toLowerCase()}-${index}`}
+          className="k3d-wilayah-summary-item"
+        >
+
+          <div className="k3d-wilayah-summary-name">
+
+            <i
+              className={
+                warnaTitik === "orange"
+                  ? "k3d-wilayah-dot-orange"
+                  : "k3d-wilayah-dot-green"
+              }
+            />
+
+            <span>
+              {namaWilayah}
+            </span>
+
+          </div>
+
+          <strong>
+            {formatNumber(totalWilayah)}
+          </strong>
+
+        </div>
+      );
+    }
+  )}
+
+</div>
+</article>
         </section>
-
-
-        {/* =====================================================
-            OPEN FINDINGS
-        ===================================================== */}
 
         <section className="k3d-panel k3d-open-panel">
 
@@ -1810,7 +2084,6 @@ export default function Dashboard() {
             </p>
 
           </div>
-
 
           <div className="k3d-table-scroll">
 
@@ -1833,23 +2106,7 @@ export default function Dashboard() {
                   </th>
 
                   <th>
-                    Mandor
-                  </th>
-
-                  <th>
                     Aktivitas
-                  </th>
-
-                  <th>
-                    Grup
-                  </th>
-
-                  <th>
-                    Deskripsi
-                  </th>
-
-                  <th>
-                    Umur
                   </th>
 
                   <th>
@@ -1857,13 +2114,12 @@ export default function Dashboard() {
                   </th>
 
                   <th>
-                    Maps
+                    Detail
                   </th>
 
                 </tr>
 
               </thead>
-
 
               <tbody>
 
@@ -1886,7 +2142,6 @@ export default function Dashboard() {
                         )}
                       </td>
 
-
                       <td>
                         {row.nama_wilayah ||
                           (row.no_wilayah
@@ -1894,51 +2149,15 @@ export default function Dashboard() {
                             : "-")}
                       </td>
 
-
                       <td>
                         {row.nama_lokasi ||
                           "-"}
                       </td>
 
-
-                      <td>
-                        {row.nama_mandor ||
-                          "-"}
-                      </td>
-
-
                       <td>
                         {row.nama_aktivitas ||
                           "-"}
                       </td>
-
-
-                      <td>
-                        {row.nama_grup ||
-                          "-"}
-                      </td>
-
-
-                      <td className="k3d-description-cell">
-                        {row.deskripsi ||
-                          "-"}
-                      </td>
-
-
-                      <td>
-
-                        <span className="k3d-open-badge">
-
-                          {Number(
-                            row.umur_hari ||
-                              0
-                          )}{" "}
-                          hari
-
-                        </span>
-
-                      </td>
-
 
                       <td>
 
@@ -1953,25 +2172,45 @@ export default function Dashboard() {
 
                       </td>
 
-
                       <td>
 
-                        {row.gmaps_url ? (
+                        <button
+                          type="button"
+                          className="k3d-eye-button"
+                          onClick={() =>
+                            setSelectedOpen(row)
+                          }
+                          title="Lihat detail temuan"
+                          aria-label="Lihat detail temuan"
+                        >
 
-                          <a
-                            href={
-                              row.gmaps_url
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            className="k3d-map-link"
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
                           >
-                            📍 Maps
-                          </a>
 
-                        ) : (
-                          "-"
-                        )}
+                            <path
+                              d="M2.5 12C4.8 7.8 8 5.5 12 5.5C16 5.5 19.2 7.8 21.5 12C19.2 16.2 16 18.5 12 18.5C8 18.5 4.8 16.2 2.5 12Z"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="3"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                            />
+
+                          </svg>
+
+                        </button>
 
                       </td>
 
@@ -1980,13 +2219,12 @@ export default function Dashboard() {
                   )
                 )}
 
-
                 {openList.length === 0 && (
 
                   <tr>
 
                     <td
-                      colSpan={10}
+                      colSpan={6}
                       className="k3d-empty"
                     >
                       Tidak ada temuan OPEN.
@@ -2004,12 +2242,235 @@ export default function Dashboard() {
 
         </section>
 
+        {selectedOpen && (
+
+          <div
+            className="k3d-open-detail-overlay"
+            onMouseDown={(event) => {
+
+              if (
+                event.target ===
+                event.currentTarget
+              ) {
+                setSelectedOpen(null);
+              }
+
+            }}
+          >
+
+            <div
+              className="k3d-open-detail-popup"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Detail temuan OPEN"
+            >
+
+              <div className="k3d-open-detail-header">
+
+                <div>
+
+                  <span>
+                    DETAIL TEMUAN
+                  </span>
+
+                  <h3>
+                    Temuan OPEN
+                  </h3>
+
+                </div>
+
+                <button
+                  type="button"
+                  className="k3d-open-detail-close"
+                  onClick={() =>
+                    setSelectedOpen(null)
+                  }
+                  title="Tutup"
+                  aria-label="Tutup detail temuan"
+                >
+                  <CloseIcon />
+                </button>
+
+              </div>
+
+              <div className="k3d-open-detail-body">
+
+                <div className="k3d-open-detail-grid">
+
+                  <div>
+
+                    <small>
+                      Tanggal Temuan
+                    </small>
+
+                    <strong>
+                      {String(
+                        selectedOpen.tanggal_temuan ||
+                          ""
+                      ).slice(
+                        0,
+                        10
+                      )}
+                    </strong>
+
+                  </div>
+
+                  <div>
+
+                    <small>
+                      Wilayah
+                    </small>
+
+                    <strong>
+                      {selectedOpen.nama_wilayah ||
+                        (selectedOpen.no_wilayah
+                          ? `Wilayah ${selectedOpen.no_wilayah}`
+                          : "-")}
+                    </strong>
+
+                  </div>
+
+                  <div>
+
+                    <small>
+                      Lokasi
+                    </small>
+
+                    <strong>
+                      {selectedOpen.nama_lokasi ||
+                        "-"}
+                    </strong>
+
+                  </div>
+
+                  <div>
+
+                    <small>
+                      Mandor
+                    </small>
+
+                    <strong>
+                      {selectedOpen.nama_mandor ||
+                        "-"}
+                    </strong>
+
+                  </div>
+
+                  <div>
+
+                    <small>
+                      Aktivitas
+                    </small>
+
+                    <strong>
+                      {selectedOpen.nama_aktivitas ||
+                        "-"}
+                    </strong>
+
+                  </div>
+
+                  <div>
+
+                    <small>
+                      Grup Temuan
+                    </small>
+
+                    <strong>
+                      {selectedOpen.nama_grup ||
+                        "-"}
+                    </strong>
+
+                  </div>
+
+                  <div>
+
+                    <small>
+                      Umur Temuan
+                    </small>
+
+                    <strong>
+                      {Number(
+                        selectedOpen.umur_hari ||
+                          0
+                      )}{" "}
+                      hari
+                    </strong>
+
+                  </div>
+
+                  <div>
+
+                    <small>
+                      Deadline
+                    </small>
+
+                    <strong>
+
+                      <BadgeDeadline
+                        sisaHari={
+                          selectedOpen.sisaHari
+                        }
+                        overdue={
+                          selectedOpen.overdue
+                        }
+                      />
+
+                    </strong>
+
+                  </div>
+
+                </div>
+
+                <div className="k3d-open-description-box">
+
+                  <div className="k3d-open-description-title">
+                    Deskripsi Temuan
+                  </div>
+
+                  <div className="k3d-open-description-text">
+                    {selectedOpen.deskripsi ||
+                      "Tidak ada deskripsi temuan."}
+                  </div>
+
+                </div>
+
+                {selectedOpen.gmaps_url && (
+
+                  <a
+                    href={
+                      selectedOpen.gmaps_url
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="k3d-open-map-button"
+                  >
+                    📍 Buka Lokasi di Maps
+                  </a>
+
+                )}
+
+              </div>
+
+              <div className="k3d-open-detail-footer">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedOpen(null)
+                  }
+                >
+                  Tutup
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )}
+
       </section>
-
-
-      {/* =====================================================
-          FOOTER
-      ===================================================== */}
 
       <footer className="k3d-footer">
 
@@ -2021,336 +2482,171 @@ export default function Dashboard() {
 
       </footer>
 
-
-      {/* =====================================================
-          STYLE NAVBAR + PROFILE
-          TIDAK MENGUBAH DASHBOARD LAINNYA
-      ===================================================== */}
-
       <style jsx global>{`
-
-        /* =====================================================
-           TOPBAR
-        ===================================================== */
 
         .k3d-dashboard .topbar {
           position: fixed !important;
-
           top: 0 !important;
           left: 0 !important;
           right: 0 !important;
-
           width: 100% !important;
-
           z-index: 99999 !important;
-
           display: flex;
-
           align-items: center;
-
           justify-content: space-between;
-
           min-height: 74px;
-
-          padding:
-            8px
-            clamp(18px, 4vw, 64px);
-
+          padding: 8px clamp(18px, 4vw, 64px);
           gap: 25px;
-
-          background:
-            rgba(255, 255, 255, 0.97);
-
-          border-bottom:
-            1px solid
-            rgba(20, 55, 33, 0.08);
-
-          box-shadow:
-            0 3px 18px
-            rgba(20, 45, 29, 0.08);
-
-          backdrop-filter:
-            blur(14px);
-
-          -webkit-backdrop-filter:
-            blur(14px);
-
-          transform:
-            translateZ(0);
-
-          isolation:
-            isolate;
+          background: rgba(255, 255, 255, 0.97);
+          border-bottom: 1px solid rgba(20, 55, 33, 0.08);
+          box-shadow: 0 3px 18px rgba(20, 45, 29, 0.08);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          transform: translateZ(0);
+          isolation: isolate;
         }
-
-
-        /* =====================================================
-           BRAND
-        ===================================================== */
 
         .k3d-dashboard .brand {
           display: flex;
-
           align-items: center;
-
           min-width: 0;
-
           gap: 12px;
-
           flex: 1;
         }
 
-
         .k3d-dashboard .brand-logo-link {
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           text-decoration: none;
-
           flex-shrink: 0;
         }
 
-
         .k3d-dashboard .logo {
           width: 108px;
-
           height: 54px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           overflow: hidden;
-
           background: transparent;
         }
 
-
         .k3d-dashboard .logo img {
           width: 100%;
-
           height: 100%;
-
           max-width: 108px;
-
           object-fit: contain;
         }
 
-
         .k3d-dashboard .brand-text {
           display: flex;
-
           flex-direction: column;
-
           gap: 3px;
-
           min-width: 0;
         }
 
-
         .k3d-dashboard .brand-text b {
           color: #142119;
-
           font-size: 15px;
-
           line-height: 1.2;
-
           font-weight: 800;
-
           white-space: nowrap;
         }
-
 
         .k3d-dashboard .brand-text span {
           color: #87918a;
-
           font-size: 12px;
-
           line-height: 1.2;
-
           white-space: nowrap;
         }
 
-
-        /* =====================================================
-           NAV
-        ===================================================== */
-
         .k3d-dashboard .nav {
           display: flex !important;
-
           align-items: center !important;
-
           justify-content: flex-end;
-
           gap: 5px !important;
-
           flex-shrink: 0 !important;
         }
-
 
         .k3d-dashboard .nav a,
         .k3d-dashboard .nav-maintenance,
         .k3d-dashboard .nav-logout {
           position: relative;
-
           display: inline-flex;
-
           align-items: center;
-
           justify-content: center;
-
           white-space: nowrap !important;
-
           text-decoration: none;
-
           color: #34453a;
-
-          padding:
-            10px
-            14px;
-
+          padding: 10px 14px;
           border-radius: 10px;
-
           font-size: 13px;
-
           font-weight: 700;
-
           transition:
             color 0.18s ease,
             background 0.18s ease,
             transform 0.18s ease;
         }
 
-
         .k3d-dashboard .nav a:hover,
         .k3d-dashboard .nav-maintenance:hover {
           color: #08783d;
-
-          background:
-            #f0f7f2;
-
-          transform:
-            translateY(-1px);
+          background: #f0f7f2;
+          transform: translateY(-1px);
         }
-
 
         .k3d-dashboard .nav a.active {
           color: #08783d;
-
-          background:
-            #edf7f0;
+          background: #edf7f0;
         }
-
 
         .k3d-dashboard .nav a.active::after {
           content: "";
-
           position: absolute;
-
           left: 14px;
-
           right: 14px;
-
           bottom: 4px;
-
           height: 2px;
-
           border-radius: 999px;
-
-          background:
-            #079447;
+          background: #079447;
         }
 
-
-        /* =====================================================
-           LOGOUT
-        ===================================================== */
-
         .k3d-dashboard .nav-logout {
-          border:
-            1px solid
-            #d9e3dc;
-
-          color:
-            #a12d2d !important;
-
-          background:
-            #fff5f5;
-
+          border: 1px solid #d9e3dc;
+          color: #a12d2d !important;
+          background: #fff5f5;
           cursor: pointer;
-
           box-shadow: none;
         }
 
-
         .k3d-dashboard .nav-logout:hover {
-          color:
-            #8f2222 !important;
-
-          background:
-            #ffe9e9;
-
-          border-color:
-            #efcccc;
-
-          transform:
-            translateY(-1px);
+          color: #8f2222 !important;
+          background: #ffe9e9;
+          border-color: #efcccc;
+          transform: translateY(-1px);
         }
-
-
-        /* =====================================================
-           PROFILE CONTAINER
-        ===================================================== */
 
         .k3d-dashboard .profile-container {
           position: relative;
-
           display: flex;
-
           align-items: center;
-
           flex-shrink: 0;
         }
 
-
-        /* =====================================================
-           PROFILE BUTTON
-        ===================================================== */
-
         .k3d-dashboard .profile-button {
           appearance: none;
-
           -webkit-appearance: none;
-
-          border: 1px solid
-            #dfe8e2;
-
-          background:
-            #ffffff;
-
-          color:
-            #34453a;
-
+          border: 1px solid #dfe8e2;
+          background: #ffffff;
+          color: #34453a;
           display: inline-flex;
-
           align-items: center;
-
           gap: 8px;
-
           min-height: 44px;
-
-          padding:
-            5px 9px 5px 6px;
-
+          padding: 5px 9px 5px 6px;
           border-radius: 12px;
-
           cursor: pointer;
-
           transition:
             background 0.18s ease,
             border-color 0.18s ease,
@@ -2358,520 +2654,366 @@ export default function Dashboard() {
             transform 0.18s ease;
         }
 
-
         .k3d-dashboard .profile-button:hover,
         .k3d-dashboard .profile-button-open {
-          background:
-            #f4faf5;
-
-          border-color:
-            #bddbc4;
-
-          box-shadow:
-            0 4px 14px
-            rgba(24, 117, 44, 0.10);
-
-          transform:
-            translateY(-1px);
+          background: #f4faf5;
+          border-color: #bddbc4;
+          box-shadow: 0 4px 14px rgba(24, 117, 44, 0.10);
+          transform: translateY(-1px);
         }
-
-
-        /* =====================================================
-           PROFILE AVATAR
-        ===================================================== */
 
         .k3d-dashboard .profile-avatar {
           width: 33px;
-
           height: 33px;
-
           min-width: 33px;
-
           border-radius: 50%;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
-          background:
-            linear-gradient(
-              135deg,
-              #18843c,
-              #0a9b4d
-            );
-
-          color:
-            #ffffff;
-
+          background: linear-gradient(135deg, #18843c, #0a9b4d);
+          color: #ffffff;
           font-size: 12px;
-
           font-weight: 800;
-
-          letter-spacing:
-            0.3px;
-
-          box-shadow:
-            0 2px 8px
-            rgba(8, 120, 61, 0.22);
+          letter-spacing: 0.3px;
+          box-shadow: 0 2px 8px rgba(8, 120, 61, 0.22);
         }
-
 
         .k3d-dashboard .profile-button-text {
           display: flex;
-
           flex-direction: column;
-
           align-items: flex-start;
-
           min-width: 65px;
-
           max-width: 130px;
-
           gap: 2px;
-
           overflow: hidden;
         }
-
 
         .k3d-dashboard .profile-button-text strong {
-          color:
-            #18251d;
-
+          color: #18251d;
           font-size: 11px;
-
           line-height: 1.2;
-
           font-weight: 800;
-
           overflow: hidden;
-
           text-overflow: ellipsis;
-
           white-space: nowrap;
-
           max-width: 130px;
         }
 
-
         .k3d-dashboard .profile-button-text small {
-          color:
-            #7b877f;
-
+          color: #7b877f;
           font-size: 9px;
-
           line-height: 1.2;
-
           font-weight: 600;
-
           white-space: nowrap;
         }
-
 
         .k3d-dashboard .profile-chevron {
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
-          color:
-            #758078;
-
-          transition:
-            transform 0.2s ease;
+          color: #758078;
+          transition: transform 0.2s ease;
         }
-
 
         .k3d-dashboard .profile-button-open
           .profile-chevron {
-          transform:
-            rotate(180deg);
+          transform: rotate(180deg);
         }
-
-
-        /* =====================================================
-           PROFILE POPUP
-        ===================================================== */
 
         .k3d-dashboard .profile-popup {
           position: absolute;
-
           top: calc(100% + 10px);
-
           right: 0;
-
           width: 330px;
-
-          max-width:
-            calc(100vw - 24px);
-
+          max-width: calc(100vw - 24px);
           overflow: hidden;
-
-          background:
-            rgba(255, 255, 255, 0.99);
-
-          border:
-            1px solid
-            #dfe8e2;
-
+          background: rgba(255, 255, 255, 0.99);
+          border: 1px solid #dfe8e2;
           border-radius: 16px;
-
-          box-shadow:
-            0 18px 50px
-            rgba(25, 53, 36, 0.18);
-
+          box-shadow: 0 18px 50px rgba(25, 53, 36, 0.18);
           z-index: 100000;
-
-          animation:
-            k3dProfilePopupIn
-            0.18s
-            ease-out;
+          animation: k3dProfilePopupIn 0.18s ease-out;
         }
 
-
         @keyframes k3dProfilePopupIn {
-
           from {
             opacity: 0;
-
-            transform:
-              translateY(-7px)
-              scale(0.98);
+            transform: translateY(-7px) scale(0.98);
           }
 
           to {
             opacity: 1;
-
-            transform:
-              translateY(0)
-              scale(1);
+            transform: translateY(0) scale(1);
           }
-
         }
-
-
-        /* =====================================================
-           POPUP HEADER
-        ===================================================== */
 
         .k3d-dashboard .profile-popup-header {
           display: flex;
-
           align-items: flex-start;
-
           justify-content: space-between;
-
           gap: 12px;
-
-          padding:
-            18px 18px 15px;
-
-          border-bottom:
-            1px solid
-            #edf1ee;
-
-          background:
-            linear-gradient(
-              180deg,
-              #f8fcf9 0%,
-              #ffffff 100%
-            );
+          padding: 18px 18px 15px;
+          border-bottom: 1px solid #edf1ee;
+          background: linear-gradient(
+            180deg,
+            #f8fcf9 0%,
+            #ffffff 100%
+          );
         }
-
 
         .k3d-dashboard .profile-popup-header h3 {
           margin: 0;
-
-          color:
-            #142119;
-
+          color: #142119;
           font-size: 15px;
-
           line-height: 1.25;
-
           font-weight: 800;
         }
 
-
         .k3d-dashboard .profile-popup-header p {
-          margin:
-            4px 0 0;
-
-          color:
-            #7a867e;
-
+          margin: 4px 0 0;
+          color: #7a867e;
           font-size: 10px;
-
           line-height: 1.4;
         }
 
-
         .k3d-dashboard .profile-close {
           width: 30px;
-
           height: 30px;
-
           min-width: 30px;
-
-          border:
-            1px solid
-            #e2e8e3;
-
+          border: 1px solid #e2e8e3;
           border-radius: 9px;
-
-          background:
-            #ffffff;
-
-          color:
-            #68756d;
-
+          background: #ffffff;
+          color: #68756d;
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           cursor: pointer;
-
-          transition:
-            all 0.18s ease;
+          transition: all 0.18s ease;
         }
-
 
         .k3d-dashboard .profile-close:hover {
-          color:
-            #a12d2d;
-
-          background:
-            #fff4f4;
-
-          border-color:
-            #efcccc;
-
-          transform:
-            rotate(3deg);
+          color: #a12d2d;
+          background: #fff4f4;
+          border-color: #efcccc;
+          transform: rotate(3deg);
         }
 
-
-        /* =====================================================
-           POPUP BODY
-        ===================================================== */
-
         .k3d-dashboard .profile-popup-body {
-          padding:
-            20px 18px;
-
+          padding: 20px 18px;
           display: flex;
-
           align-items: center;
-
           gap: 15px;
         }
 
-
         .k3d-dashboard .profile-large-avatar {
           width: 66px;
-
           height: 66px;
-
           min-width: 66px;
-
           border-radius: 50%;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
-          background:
-            linear-gradient(
-              135deg,
-              #18843c,
-              #079447
-            );
-
-          color:
-            #ffffff;
-
+          background: linear-gradient(135deg, #18843c, #079447);
+          color: #ffffff;
           font-size: 21px;
-
           font-weight: 800;
-
-          box-shadow:
-            0 8px 20px
-            rgba(8, 120, 61, 0.20);
-
-          border:
-            4px solid
-            #eef8f1;
+          box-shadow: 0 8px 20px rgba(8, 120, 61, 0.20);
+          border: 4px solid #eef8f1;
         }
-
 
         .k3d-dashboard .profile-info {
           flex: 1;
-
           min-width: 0;
-
           display: flex;
-
           flex-direction: column;
-
           gap: 12px;
         }
 
-
         .k3d-dashboard .profile-info-item {
           display: flex;
-
           align-items: center;
-
           gap: 9px;
-
           min-width: 0;
         }
-
 
         .k3d-dashboard .profile-info-item > div {
           display: flex;
-
           flex-direction: column;
-
           gap: 2px;
-
           min-width: 0;
         }
 
-
         .k3d-dashboard .profile-info-item small {
-          color:
-            #8a958e;
-
+          color: #8a958e;
           font-size: 9px;
-
           line-height: 1.2;
-
           font-weight: 600;
         }
 
-
         .k3d-dashboard .profile-info-item strong {
-          color:
-            #17231c;
-
+          color: #17231c;
           font-size: 12px;
-
           line-height: 1.3;
-
           font-weight: 800;
-
           overflow-wrap: anywhere;
         }
-
 
         .k3d-dashboard .profile-info-icon,
         .k3d-dashboard .profile-role-icon {
           width: 32px;
-
           height: 32px;
-
           min-width: 32px;
-
           border-radius: 9px;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
         }
 
-
         .k3d-dashboard .profile-info-icon {
-          color:
-            #08783d;
-
-          background:
-            #edf7f0;
+          color: #08783d;
+          background: #edf7f0;
         }
-
 
         .k3d-dashboard .profile-role-icon {
-          color:
-            #54715f;
-
-          background:
-            #f0f4f1;
+          color: #54715f;
+          background: #f0f4f1;
         }
-
-
-        /* =====================================================
-           POPUP FOOTER
-        ===================================================== */
 
         .k3d-dashboard .profile-popup-footer {
           display: flex;
-
           align-items: center;
-
           gap: 7px;
-
-          padding:
-            11px 18px;
-
-          background:
-            #f8faf8;
-
-          border-top:
-            1px solid
-            #edf1ee;
-
-          color:
-            #758078;
-
+          padding: 11px 18px;
+          background: #f8faf8;
+          border-top: 1px solid #edf1ee;
+          color: #758078;
           font-size: 9px;
-
           font-weight: 600;
         }
 
-
         .k3d-dashboard .profile-status-dot {
           width: 7px;
-
           height: 7px;
-
           border-radius: 50%;
-
-          background:
-            #20a052;
-
-          box-shadow:
-            0 0 0 3px
-            rgba(32, 160, 82, 0.10);
+          background: #20a052;
+          box-shadow: 0 0 0 3px rgba(32, 160, 82, 0.10);
         }
-
-
-        /* =====================================================
-           DASHBOARD SPACE FOR FIXED NAVBAR
-        ===================================================== */
 
         .k3d-dashboard {
-          padding-top:
-            74px !important;
+          padding-top: 74px !important;
         }
 
-
         /* =====================================================
-           RESPONSIVE 900
+           AKSI FILTER BARU
         ===================================================== */
+
+        .k3d-dashboard .k3d-filter-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .k3d-dashboard .k3d-period-display {
+          min-height: 44px;
+          display: inline-flex;
+          align-items: center;
+          gap: 9px;
+          padding: 6px 12px;
+          border: 1px solid #dfe8e2;
+          border-radius: 10px;
+          background: #ffffff;
+          color: #34453a;
+          white-space: nowrap;
+          box-sizing: border-box;
+        }
+
+        .k3d-dashboard .k3d-period-icon {
+          width: 30px;
+          height: 30px;
+          min-width: 30px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #08783d;
+          background: #edf7f0;
+          border-radius: 8px;
+        }
+
+        .k3d-dashboard .k3d-period-text {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          line-height: 1.2;
+        }
+
+        .k3d-dashboard .k3d-period-label {
+          color: #5f6e64;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .k3d-dashboard .k3d-period-value {
+          color: #26352c;
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .k3d-dashboard .k3d-period-chevron {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #68756d;
+          margin-left: 2px;
+        }
+
+        .k3d-dashboard .k3d-refresh-button {
+          min-height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 7px 14px;
+          border: 1px solid #cfe0d4;
+          border-radius: 10px;
+          background: #ffffff;
+          color: #08783d;
+          font-size: 11px;
+          font-weight: 800;
+          white-space: nowrap;
+          cursor: pointer;
+          transition:
+            background 0.18s ease,
+            border-color 0.18s ease,
+            transform 0.18s ease,
+            box-shadow 0.18s ease;
+        }
+
+        .k3d-dashboard .k3d-refresh-button:hover:not(:disabled) {
+          background: #f1f8f3;
+          border-color: #afd0ba;
+          box-shadow: 0 4px 12px rgba(8, 120, 61, 0.08);
+          transform: translateY(-1px);
+        }
+
+        .k3d-dashboard .k3d-refresh-button:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+
+        @media (max-width: 1100px) {
+
+          .k3d-dashboard .k3d-filter-actions {
+            width: 100%;
+            justify-content: flex-start;
+          }
+
+        }
 
         @media (max-width: 900px) {
 
           .k3d-dashboard .topbar {
-            padding:
-              8px 20px;
+            padding: 8px 20px;
           }
 
           .k3d-dashboard .profile-button-text {
@@ -2879,8 +3021,7 @@ export default function Dashboard() {
           }
 
           .k3d-dashboard .profile-button {
-            padding:
-              5px 7px;
+            padding: 5px 7px;
           }
 
           .k3d-dashboard .profile-chevron {
@@ -2889,396 +3030,664 @@ export default function Dashboard() {
 
         }
 
-
-        /* =====================================================
-           RESPONSIVE 768
-        ===================================================== */
-
         @media (max-width: 768px) {
 
           .k3d-dashboard {
-            padding-top:
-              66px !important;
+            padding-top: 66px !important;
           }
-
 
           .k3d-dashboard .topbar {
-            min-height:
-              66px !important;
-
-            padding:
-              7px 11px !important;
-
-            gap:
-              8px !important;
+            min-height: 66px !important;
+            padding: 7px 11px !important;
+            gap: 8px !important;
           }
-
 
           .k3d-dashboard .brand {
-            min-width:
-              0 !important;
-
-            flex:
-              1 1 auto !important;
-
-            gap:
-              7px;
+            min-width: 0 !important;
+            flex: 1 1 auto !important;
+            gap: 7px;
           }
-
 
           .k3d-dashboard .logo {
-            width:
-              92px !important;
-
-            height:
-              43px !important;
-
-            flex-basis:
-              92px !important;
+            width: 92px !important;
+            height: 43px !important;
+            flex-basis: 92px !important;
           }
-
 
           .k3d-dashboard .logo img {
-            max-width:
-              92px !important;
+            max-width: 92px !important;
           }
-
 
           .k3d-dashboard .brand-text {
-            display:
-              none !important;
+            display: none !important;
           }
-
 
           .k3d-dashboard .nav {
-            max-width:
-              73vw;
-
-            overflow-x:
-              auto !important;
-
-            overflow-y:
-              hidden !important;
-
-            scrollbar-width:
-              none;
-
-            gap:
-              4px !important;
-
-            padding-bottom:
-              2px;
+            max-width: 73vw;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            scrollbar-width: none;
+            gap: 4px !important;
+            padding-bottom: 2px;
           }
-
 
           .k3d-dashboard .nav::-webkit-scrollbar {
-            display:
-              none;
+            display: none;
           }
-
 
           .k3d-dashboard .nav a,
           .k3d-dashboard .nav-maintenance,
           .k3d-dashboard .nav-login,
           .k3d-dashboard .nav-logout {
-            flex:
-              0 0 auto !important;
-
-            padding:
-              8px 9px !important;
-
-            font-size:
-              10px !important;
-
-            border-radius:
-              9px !important;
+            flex: 0 0 auto !important;
+            padding: 8px 9px !important;
+            font-size: 10px !important;
+            border-radius: 9px !important;
           }
-
 
           .k3d-dashboard .nav-logout {
-            color:
-              #a12d2d !important;
-
-            background:
-              #fff5f5 !important;
+            color: #a12d2d !important;
+            background: #fff5f5 !important;
           }
-
 
           .k3d-dashboard .nav a.active::after {
-            left:
-              9px;
-
-            right:
-              9px;
-
-            bottom:
-              3px;
+            left: 9px;
+            right: 9px;
+            bottom: 3px;
           }
-
 
           .k3d-dashboard .profile-button {
-            width:
-              35px;
-
-            height:
-              35px;
-
-            min-height:
-              35px;
-
-            padding:
-              1px;
-
-            border-radius:
-              50%;
-
-            justify-content:
-              center;
+            width: 35px;
+            height: 35px;
+            min-height: 35px;
+            padding: 1px;
+            border-radius: 50%;
+            justify-content: center;
           }
-
 
           .k3d-dashboard .profile-avatar {
-            width:
-              29px;
-
-            height:
-              29px;
-
-            min-width:
-              29px;
-
-            font-size:
-              10px;
+            width: 29px;
+            height: 29px;
+            min-width: 29px;
+            font-size: 10px;
           }
 
-
           .k3d-dashboard .profile-popup {
-            position:
-              fixed;
+            position: fixed;
+            top: 73px;
+            right: 10px;
+            width: min(330px, calc(100vw - 20px));
+            max-width: calc(100vw - 20px);
+          }
 
-            top:
-              73px;
+          .k3d-dashboard .k3d-period-display {
+            min-height: 40px;
+            padding: 5px 9px;
+          }
 
-            right:
-              10px;
+          .k3d-dashboard .k3d-period-label {
+            display: none;
+          }
 
-            width:
-              min(330px, calc(100vw - 20px));
+          .k3d-dashboard .k3d-period-value {
+            font-size: 10px;
+          }
 
-            max-width:
-              calc(100vw - 20px);
+          .k3d-dashboard .k3d-refresh-button {
+            min-height: 40px;
+            padding: 6px 10px;
+            font-size: 10px;
           }
 
         }
-
-
-        /* =====================================================
-           RESPONSIVE 480
-        ===================================================== */
 
         @media (max-width: 480px) {
 
           .k3d-dashboard {
-            padding-top:
-              60px !important;
+            padding-top: 60px !important;
           }
-
 
           .k3d-dashboard .topbar {
-            min-height:
-              60px !important;
-
-            padding:
-              7px 8px !important;
-
-            gap:
-              5px !important;
+            min-height: 60px !important;
+            padding: 7px 8px !important;
+            gap: 5px !important;
           }
-
 
           .k3d-dashboard .logo {
-            width:
-              82px !important;
-
-            height:
-              39px !important;
-
-            flex-basis:
-              82px !important;
+            width: 82px !important;
+            height: 39px !important;
+            flex-basis: 82px !important;
           }
-
 
           .k3d-dashboard .logo img {
-            max-width:
-              82px !important;
+            max-width: 82px !important;
           }
-
 
           .k3d-dashboard .nav {
-            max-width:
-              77vw !important;
-
-            gap:
-              3px !important;
+            max-width: 77vw !important;
+            gap: 3px !important;
           }
-
 
           .k3d-dashboard .nav a,
           .k3d-dashboard .nav-maintenance,
           .k3d-dashboard .nav-login,
           .k3d-dashboard .nav-logout {
-            padding:
-              7px 6px !important;
-
-            font-size:
-              9px !important;
+            padding: 7px 6px !important;
+            font-size: 9px !important;
           }
-
 
           .k3d-dashboard .profile-button {
-            width:
-              32px;
-
-            height:
-              32px;
+            width: 32px;
+            height: 32px;
           }
-
 
           .k3d-dashboard .profile-avatar {
-            width:
-              27px;
-
-            height:
-              27px;
-
-            min-width:
-              27px;
-
-            font-size:
-              9px;
+            width: 27px;
+            height: 27px;
+            min-width: 27px;
+            font-size: 9px;
           }
-
 
           .k3d-dashboard .profile-popup {
-            top:
-              67px;
-
-            right:
-              8px;
-
-            width:
-              calc(100vw - 16px);
+            top: 67px;
+            right: 8px;
+            width: calc(100vw - 16px);
           }
-
 
           .k3d-dashboard .profile-popup-body {
-            padding:
-              17px 15px;
-
-            gap:
-              12px;
+            padding: 17px 15px;
+            gap: 12px;
           }
 
-
           .k3d-dashboard .profile-large-avatar {
-            width:
-              58px;
+            width: 58px;
+            height: 58px;
+            min-width: 58px;
+            font-size: 18px;
+          }
 
-            height:
-              58px;
+          .k3d-dashboard .k3d-filter-actions {
+            gap: 7px;
+          }
 
-            min-width:
-              58px;
+          .k3d-dashboard .k3d-period-display {
+            flex: 1 1 auto;
+            min-width: 0;
+          }
 
-            font-size:
-              18px;
+          .k3d-dashboard .k3d-period-value {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .k3d-dashboard .k3d-refresh-button {
+            flex-shrink: 0;
+          }
+
+          .k3d-dashboard .k3d-refresh-button span {
+            display: none;
+          }
+
+          .k3d-dashboard .k3d-refresh-button {
+            width: 40px;
+            padding: 0;
           }
 
         }
-
-
-        /* =====================================================
-           RESPONSIVE 390
-        ===================================================== */
 
         @media (max-width: 390px) {
 
           .k3d-dashboard {
-            padding-top:
-              58px !important;
+            padding-top: 58px !important;
           }
-
 
           .k3d-dashboard .logo {
-            width:
-              74px !important;
-
-            height:
-              36px !important;
-
-            flex-basis:
-              74px !important;
+            width: 74px !important;
+            height: 36px !important;
+            flex-basis: 74px !important;
           }
-
 
           .k3d-dashboard .logo img {
-            max-width:
-              74px !important;
+            max-width: 74px !important;
           }
-
 
           .k3d-dashboard .nav {
-            max-width:
-              80vw !important;
+            max-width: 80vw !important;
           }
-
 
           .k3d-dashboard .nav a,
           .k3d-dashboard .nav-maintenance,
           .k3d-dashboard .nav-login,
           .k3d-dashboard .nav-logout {
-            padding:
-              6px 5px !important;
-
-            font-size:
-              8px !important;
+            padding: 6px 5px !important;
+            font-size: 8px !important;
           }
-
 
           .k3d-dashboard .profile-button {
-            width:
-              30px;
-
-            height:
-              30px;
+            width: 30px;
+            height: 30px;
           }
-
 
           .k3d-dashboard .profile-avatar {
-            width:
-              25px;
-
-            height:
-              25px;
-
-            min-width:
-              25px;
+            width: 25px;
+            height: 25px;
+            min-width: 25px;
           }
 
-
           .k3d-dashboard .profile-popup {
-            top:
-              64px;
-
-            right:
-              6px;
-
-            width:
-              calc(100vw - 12px);
+            top: 64px;
+            right: 6px;
+            width: calc(100vw - 12px);
           }
 
         }
 
+        /* =====================================================
+           TAMBAHAN DETAIL TEMUAN OPEN
+        ===================================================== */
+
+        .k3d-eye-button {
+          width: 34px;
+          height: 34px;
+          padding: 0;
+          border: 1px solid #dce7df;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #176b3a;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .k3d-eye-button:hover {
+          background: #f1f7f3;
+          border-color: #b8d4c1;
+          color: #12562f;
+        }
+
+        .k3d-open-detail-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 100000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          background: rgba(18, 33, 24, 0.48);
+          backdrop-filter: blur(3px);
+          -webkit-backdrop-filter: blur(3px);
+        }
+
+        .k3d-open-detail-popup {
+          width: min(720px, 100%);
+          max-height: 90vh;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          background: #ffffff;
+          border: 1px solid #dfe8e2;
+          border-radius: 16px;
+          box-shadow: 0 24px 65px rgba(0, 0, 0, 0.22);
+        }
+
+        .k3d-open-detail-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 20px 22px;
+          border-bottom: 1px solid #edf1ee;
+        }
+
+        .k3d-open-detail-header span {
+          display: block;
+          margin-bottom: 4px;
+          color: #e17a17;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 1px;
+        }
+
+        .k3d-open-detail-header h3 {
+          margin: 0;
+          color: #142119;
+          font-size: 20px;
+          font-weight: 800;
+        }
+
+        .k3d-open-detail-close {
+          width: 34px;
+          height: 34px;
+          padding: 0;
+          border: 1px solid #dfe7e2;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #6f7b73;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .k3d-open-detail-close:hover {
+          background: #f4f7f5;
+          color: #142119;
+        }
+
+        .k3d-open-detail-body {
+          padding: 20px 22px;
+          overflow-y: auto;
+        }
+
+        .k3d-open-detail-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .k3d-open-detail-grid > div {
+          padding: 12px 13px;
+          border: 1px solid #e5ece7;
+          border-radius: 10px;
+          background: #fbfdfb;
+        }
+
+        .k3d-open-detail-grid small {
+          display: block;
+          margin-bottom: 4px;
+          color: #89948d;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .k3d-open-detail-grid strong {
+          display: block;
+          color: #26352c;
+          font-size: 13px;
+          line-height: 1.45;
+          word-break: break-word;
+        }
+
+        .k3d-open-description-box {
+          margin-top: 12px;
+          overflow: hidden;
+          border: 1px solid #e5ece7;
+          border-radius: 10px;
+        }
+
+        .k3d-open-description-title {
+          padding: 11px 13px;
+          background: #f4f8f5;
+          border-bottom: 1px solid #e5ece7;
+          color: #334239;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .k3d-open-description-text {
+          min-height: 90px;
+          padding: 14px;
+          color: #48564e;
+          font-size: 13px;
+          line-height: 1.7;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .k3d-open-map-button {
+          display: inline-flex;
+          align-items: center;
+          margin-top: 12px;
+          padding: 9px 13px;
+          border-radius: 8px;
+          background: #edf7f0;
+          color: #176b3a;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .k3d-open-map-button:hover {
+          background: #e2f1e7;
+        }
+
+        .k3d-open-detail-footer {
+          display: flex;
+          justify-content: flex-end;
+          padding: 12px 22px;
+          border-top: 1px solid #edf1ee;
+          background: #fafcfb;
+        }
+
+        .k3d-open-detail-footer button {
+          min-width: 78px;
+          padding: 9px 15px;
+          border: 0;
+          border-radius: 8px;
+          background: #176b3a;
+          color: #ffffff;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .k3d-open-detail-footer button:hover {
+          background: #12562f;
+        }
+
+        @media (max-width: 600px) {
+
+          .k3d-open-detail-overlay {
+            padding: 10px;
+            align-items: flex-end;
+          }
+
+          .k3d-open-detail-popup {
+            max-height: 92vh;
+            border-radius: 14px 14px 0 0;
+          }
+
+          .k3d-open-detail-header,
+          .k3d-open-detail-body {
+            padding-left: 16px;
+            padding-right: 16px;
+          }
+
+          .k3d-open-detail-footer {
+            padding-left: 16px;
+            padding-right: 16px;
+          }
+
+          .k3d-open-detail-grid {
+            grid-template-columns: 1fr;
+          }
+
+        }
+/* =========================================================
+   REVISI TEMUAN PER WILAYAH
+========================================================= */
+
+.k3d-wilayah-panel {
+  overflow: hidden;
+}
+
+.k3d-wilayah-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.k3d-wilayah-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-top: 8px;
+  flex-shrink: 0;
+}
+
+.k3d-wilayah-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #4e5854;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.k3d-wilayah-legend i {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.k3d-wilayah-chart-wrapper {
+  width: 100%;
+  min-height: 390px;
+  margin-top: 4px;
+  border: none !important;
+  outline: none !important;
+}
+
+.k3d-wilayah-chart-wrapper * {
+  outline: none;
+}
+
+.k3d-wilayah-summary-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 4px;
+  border-top: 1px solid #e4ebe6;
+}
+
+.k3d-wilayah-summary-item {
+  position: relative;
+  min-width: 0;
+  min-height: 55px;
+  padding: 8px 10px 7px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.k3d-wilayah-summary-item::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  right: 0;
+  width: 1px;
+  background: #e2e8e3;
+}
+
+.k3d-wilayah-summary-item:nth-child(5)::after,
+.k3d-wilayah-summary-item:nth-child(10)::after {
+  display: none;
+}
+
+.k3d-wilayah-summary-item:nth-child(n + 6) {
+  border-top: 1px solid #e4ebe6;
+}
+
+.k3d-wilayah-summary-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 5px;
+}
+
+.k3d-wilayah-summary-name span {
+  overflow: hidden;
+  color: #53605a;
+  font-size: 10px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.k3d-wilayah-summary-item strong {
+  padding-left: 18px;
+  color: #16723d;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.k3d-wilayah-dot-green,
+.k3d-wilayah-dot-orange {
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.k3d-wilayah-dot-green {
+  background: #4a9a63;
+}
+
+.k3d-wilayah-dot-orange {
+  background: #f5a623;
+}
+
+
+/* =========================================================
+   RESPONSIVE TEMUAN PER WILAYAH
+========================================================= */
+
+@media (max-width: 1100px) {
+
+  .k3d-wilayah-summary-list {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .k3d-wilayah-summary-item {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .k3d-wilayah-summary-name span {
+    font-size: 11px;
+  }
+
+}
+
+
+@media (max-width: 760px) {
+
+  .k3d-wilayah-heading-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .k3d-wilayah-legend {
+    padding-top: 0;
+  }
+
+  .k3d-wilayah-summary-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .k3d-wilayah-summary-item {
+    border-top: 1px solid #e4ebe6;
+  }
+
+  .k3d-wilayah-summary-item::after {
+    display: block !important;
+  }
+
+  .k3d-wilayah-summary-item:nth-child(even)::after {
+    display: none !important;
+  }
+
+}
       `}</style>
 
     </main>
