@@ -144,7 +144,7 @@ export async function GET(req) {
       });
     }
 
-    const wb = buatWorkbookTemuan(openRows, "Temuan OPEN");
+    const wb = await buatWorkbookTemuan(openRows, "Temuan OPEN");
     tambahSheet(wb, ringkasanRows, "Ringkasan");
     tambahSheet(
       wb,

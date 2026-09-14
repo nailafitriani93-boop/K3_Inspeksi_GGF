@@ -16,9 +16,67 @@ const WILAYAH = [
   "Wilayah 5",
   "Wilayah 6",
   "Wilayah 7",
+  "Bengkel",
+  "Mixing",
+  "Dipping",
+  "Office",
 ];
 
 const STATUS = ["Semua Status", "OPEN", "CLOSE"];
+const CLOSE_ALLOWED_ROLES = [
+  "ADMIN_DEVELOPER",
+  "ADMIN",
+  "ADMIN_INSPECTOR",
+  "INSPECTOR",
+];
+const GRUP_TEMUAN = [
+  "Semua Grup",
+  "APD",
+  "Bangunan",
+  "Fasilitas Kantor",
+  "Unit",
+];
+
+function RefreshIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 11A8.1 8.1 0 0 0 5.3 6.2L3.5 8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 4.5V8H7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 13A8.1 8.1 0 0 0 18.7 17.8L20.5 16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20.5 19.5V16H17"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function formatTanggal(value) {
   if (!value) return "-";
@@ -32,6 +90,31 @@ function formatTanggal(value) {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+function isTemuanTerlambat(item) {
+  const status = String(
+    item?.status_temuan || "OPEN"
+  ).toUpperCase();
+
+  if (status === "CLOSE" || !item?.tanggal_temuan) {
+    return false;
+  }
+
+  const tanggalTemuan = new Date(
+    item.tanggal_temuan
+  );
+
+  if (Number.isNaN(tanggalTemuan.getTime())) {
+    return false;
+  }
+
+  const batasTerlambat = new Date();
+  batasTerlambat.setDate(
+    batasTerlambat.getDate() - 7
+  );
+
+  return tanggalTemuan < batasTerlambat;
 }
 
 function wilayahLabel(item) {
@@ -106,6 +189,8 @@ export default function DataTemuanPage() {
   const [error, setError] = useState("");
 
   const [periode, setPeriode] = useState("Semua Data");
+  const [periodeDari, setPeriodeDari] = useState("");
+  const [periodeSampai, setPeriodeSampai] = useState("");
   const [wilayah, setWilayah] = useState("Semua Wilayah");
   const [status, setStatus] = useState("Semua Status");
   const [grup, setGrup] = useState("Semua Grup");
@@ -127,9 +212,11 @@ export default function DataTemuanPage() {
   const [perPage, setPerPage] = useState(8);
 
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const [currentUser, setCurrentUser] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
   const profileRef = useRef(null);
 
   // ============================================================
@@ -183,6 +270,22 @@ export default function DataTemuanPage() {
     };
   }, []);
 
+  useEffect(() => {
+    function handleEscape(event) {
+      if (event.key === "Escape" && selectedTemuan) {
+        tutupDetail();
+      }
+    }
+
+    if (selectedTemuan) {
+      document.addEventListener("keydown", handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [selectedTemuan]);
+
   // ============================================================
   // LOAD DATA
   // ============================================================
@@ -199,20 +302,30 @@ export default function DataTemuanPage() {
         }
       );
 
-      const result = await response.json();
+const responseText = await response.text();
 
-      if (!response.ok) {
-        throw new Error(
-          result?.error ||
-            "Gagal mengambil data temuan."
-        );
-      }
+let result;
 
-      setData(
-        Array.isArray(result?.data)
-          ? result.data
-          : []
-      );
+try {
+  result = JSON.parse(responseText);
+} catch {
+  throw new Error(
+    "API /api/temuan/data tidak mengembalikan JSON. Periksa error pada route API."
+  );
+}
+
+if (!response.ok) {
+  throw new Error(
+    result?.error ||
+      "Gagal mengambil data temuan."
+  );
+}
+
+setData(
+  Array.isArray(result?.data)
+    ? result.data
+    : []
+);
     } catch (err) {
       console.error(err);
       setError(
@@ -228,24 +341,36 @@ export default function DataTemuanPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!data.length || !currentUser?.username) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("temuan");
+    const item = data.find((row) => String(row.id_temuan) === String(id));
+
+    if (item && params.get("action") === "close") {
+      bukaClose(item);
+      window.history.replaceState({}, "", "/temuan");
+    }
+  }, [data, currentUser]);
+
   // ============================================================
   // GROUP OPTION
   // ============================================================
 
-  const grupOptions = useMemo(() => {
-    const values = data
-      .map(
-        (item) =>
-          item?.master_grup_temuan
-            ?.nama_grup
-      )
-      .filter(Boolean);
+  const grupOptions = GRUP_TEMUAN;
 
-    return [
-      "Semua Grup",
-      ...Array.from(new Set(values)).sort(),
-    ];
-  }, [data]);
+  function refreshData() {
+    setPeriode("Semua Data");
+    setPeriodeDari("");
+    setPeriodeSampai("");
+    setWilayah("Semua Wilayah");
+    setStatus("Semua Status");
+    setGrup("Semua Grup");
+    setSearch("");
+    setPage(1);
+    loadData();
+  }
 
   // ============================================================
   // FILTER
@@ -306,13 +431,17 @@ export default function DataTemuanPage() {
 
       const wilayahMatch =
         wilayah === "Semua Wilayah" ||
-        nomorWilayah ===
-          Number(
-            wilayah.replace(
-              "Wilayah ",
-              ""
-            )
-          );
+        (wilayah.startsWith("Wilayah ") &&
+          nomorWilayah ===
+            Number(
+              wilayah.replace(
+                "Wilayah ",
+                ""
+              )
+            )) ||
+        (!wilayah.startsWith("Wilayah ") &&
+          namaWilayah.toLowerCase() ===
+            wilayah.toLowerCase());
 
       const statusMatch =
         status === "Semua Status" ||
@@ -324,7 +453,19 @@ export default function DataTemuanPage() {
 
       let periodeMatch = true;
 
-      if (periode !== "Semua Data") {
+      if (periode === "Pilih Waktu") {
+        const date = new Date(item?.tanggal_temuan);
+
+        if (Number.isNaN(date.getTime())) {
+          periodeMatch = false;
+        } else {
+          const tanggal = date.toISOString().slice(0, 10);
+
+          periodeMatch =
+            (!periodeDari || tanggal >= periodeDari) &&
+            (!periodeSampai || tanggal <= periodeSampai);
+        }
+      } else if (periode !== "Semua Data") {
         const date = new Date(
           item?.tanggal_temuan
         );
@@ -382,6 +523,8 @@ export default function DataTemuanPage() {
     status,
     grup,
     periode,
+    periodeDari,
+    periodeSampai,
   ]);
 
   // ============================================================
@@ -430,6 +573,7 @@ export default function DataTemuanPage() {
   function tutupDetail() {
     setDetailOpen(false);
     setCloseOpen(false);
+    setSelectedTemuan(null);
   }
 
   // ============================================================
@@ -437,13 +581,13 @@ export default function DataTemuanPage() {
   // ============================================================
 
   function bukaClose(item) {
-    if (
-      String(
-        currentUser?.role || ""
-      ).toUpperCase() !== "KASIE"
-    ) {
+    const currentRole = String(
+      currentUser?.role || ""
+    ).toUpperCase();
+
+    if (!CLOSE_ALLOWED_ROLES.includes(currentRole)) {
       setCloseError(
-        "Hanya KASIE yang dapat melakukan tindak lanjut dan close temuan."
+        "Role pengguna tidak memiliki akses untuk melakukan tindak lanjut dan close temuan."
       );
 
       setSelectedTemuan(item);
@@ -519,13 +663,13 @@ export default function DataTemuanPage() {
   async function simpanClose() {
     if (!selectedTemuan) return;
 
-    if (
-      String(
-        currentUser?.role || ""
-      ).toUpperCase() !== "KASIE"
-    ) {
+    const currentRole = String(
+      currentUser?.role || ""
+    ).toUpperCase();
+
+    if (!CLOSE_ALLOWED_ROLES.includes(currentRole)) {
       setCloseError(
-        "Hanya KASIE yang dapat melakukan close temuan."
+        "Role pengguna tidak memiliki akses untuk melakukan close temuan."
       );
 
       return;
@@ -570,7 +714,7 @@ export default function DataTemuanPage() {
             closed_by:
               currentUser?.nama_lengkap ||
               currentUser?.username ||
-              "KASIE",
+              currentRole,
           }),
         }
       );
@@ -643,16 +787,30 @@ export default function DataTemuanPage() {
   // EXPORT
   // ============================================================
 
+  function exportParams(format) {
+    const params = new URLSearchParams();
+    params.set("format", format);
+
+    params.set(
+      "ids",
+      filteredData
+        .map((item) => item.id_temuan)
+        .join(",")
+    );
+
+    return params.toString();
+  }
+
   function exportExcel() {
     window.open(
-      "/api/dashboard/export?format=xlsx",
+      `/api/export?${exportParams("xlsx")}`,
       "_blank"
     );
   }
 
   function exportPdf() {
     window.open(
-      "/api/dashboard/export?format=pdf",
+      `/api/export?${exportParams("pdf")}`,
       "_blank"
     );
   }
@@ -660,6 +818,10 @@ export default function DataTemuanPage() {
   return (
     <>
       <style jsx global>{`
+
+        @import url(
+          'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap'
+        );
 
         * {
           box-sizing: border-box;
@@ -1133,6 +1295,7 @@ export default function DataTemuanPage() {
         ====================================================== */
 
         .filter-card {
+          position: relative;
           background: #ffffff;
 
           border:
@@ -1141,7 +1304,7 @@ export default function DataTemuanPage() {
           border-radius: 15px;
 
           padding:
-            15px 16px 16px;
+            42px 16px 16px;
 
           box-shadow:
             0 5px 18px
@@ -1192,6 +1355,7 @@ export default function DataTemuanPage() {
         }
 
         .filter-field select,
+        .filter-date-input,
         .search-input {
           width: 100%;
           height: 38px;
@@ -1214,6 +1378,7 @@ export default function DataTemuanPage() {
         }
 
         .filter-field select:focus,
+        .filter-date-input:focus,
         .search-input:focus {
           border-color: #72b98a;
 
@@ -1275,6 +1440,28 @@ export default function DataTemuanPage() {
 
         .btn:hover {
           background: #f6faf7;
+        }
+
+        .filter-refresh-button {
+          width: 38px;
+          padding: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .filter-refresh-button:disabled {
+          opacity: .65;
+          cursor: not-allowed;
+        }
+
+        .filter-refresh-top {
+          position: absolute;
+          top: 8px;
+          right: 16px;
+          width: 30px;
+          height: 30px;
+          border-radius: 8px;
         }
 
         .btn-primary {
@@ -1419,6 +1606,10 @@ export default function DataTemuanPage() {
           text-align: center;
         }
 
+        .mobile-leading-action {
+          display: none;
+        }
+
         .ellipsis {
           max-width: 170px;
 
@@ -1487,6 +1678,42 @@ export default function DataTemuanPage() {
 
         .icon-btn.green {
           color: #078a41;
+        }
+
+        .icon-btn.detail-open {
+          background: #fff3d5;
+          border-color: #f2cf75;
+          color: #d88a00;
+        }
+
+        .icon-btn.detail-close {
+          background: #e2f5e7;
+          border-color: #a8d8b5;
+          color: #16833e;
+        }
+
+        .icon-btn.detail-late {
+          background: #252b27;
+          border-color: #252b27;
+          color: #ffffff;
+        }
+
+        .icon-btn.detail-open:hover {
+          background: #ffe8ad;
+          border-color: #e8b84f;
+          color: #b86f00;
+        }
+
+        .icon-btn.detail-close:hover {
+          background: #ccebd4;
+          border-color: #8bc79b;
+          color: #116d34;
+        }
+
+        .icon-btn.detail-late:hover {
+          background: #111512;
+          border-color: #111512;
+          color: #ffffff;
         }
 
         .icon-btn svg {
@@ -1634,6 +1861,35 @@ export default function DataTemuanPage() {
           display: flex;
           flex-direction: column;
           gap: 12px;
+        }
+
+        .detail-modal-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 1100;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          background: rgba(20, 35, 25, 0.42);
+          overflow-y: auto;
+          pointer-events: auto;
+        }
+
+        .detail-modal-content {
+          width: min(100%, 760px);
+          max-height: calc(100vh - 48px);
+          overflow-y: auto;
+          border-radius: 16px;
+          position: relative;
+          z-index: 1;
+          pointer-events: auto;
+        }
+
+        .detail-modal-content .side-column {
+          width: 100%;
+          flex: 0 0 auto;
+          pointer-events: auto;
         }
 
         .side-card {
@@ -2236,9 +2492,734 @@ export default function DataTemuanPage() {
 
           .side-column {
             width: 100%;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            box-sizing: border-box;
+            padding: 12px;
+            overflow-y: auto;
+            background: rgba(20, 35, 25, .28);
+          }
+
+          .detail-modal-overlay {
+            padding: 12px;
+          }
+
+          .detail-modal-content {
+            width: 100%;
+            max-height: calc(100vh - 24px);
+          }
+
+          .detail-modal-content .side-column {
+            position: static;
+            inset: auto;
+            overflow: visible;
+            background: transparent;
+          }
+
+          .side-card,
+          .close-card {
+            width: min(100%, 520px);
+            margin: 0 auto;
+          }
+
+          .upload-row {
+            flex-wrap: wrap;
+          }
+
+          .upload-row .upload-name {
+            flex-basis: 100%;
+          }
+
+          .mobile-leading-action {
+            display: table-cell;
+          }
+
+          .desktop-action {
+            display: none;
           }
         }
 
+        /* ============================================================
+   NAVBAR DESKTOP
+   SAMAKAN DENGAN INSPEKSI & DASHBOARD
+   MOBILE TIDAK DIUBAH
+   ============================================================ */
+
+@media (min-width: 901px) {
+
+  .temuan-page .topbar {
+    font-family: "Inter", Arial, sans-serif !important;
+    height: 78px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 20px !important;
+
+    padding: 10px clamp(18px, 4vw, 54px) !important;
+  }
+
+  .temuan-page .brand {
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 12px !important;
+
+    min-width: 0 !important;
+  }
+
+  .temuan-page .brand .logo {
+    width: 110px !important;
+    height: 52px !important;
+
+    flex: 0 0 110px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    overflow: hidden !important;
+  }
+
+  .temuan-page .brand .logo img {
+    display: block !important;
+
+    width: 100% !important;
+    max-width: 110px !important;
+    height: auto !important;
+
+    object-fit: contain !important;
+  }
+
+  .temuan-page .brand-text {
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 2px !important;
+
+    min-width: 0 !important;
+
+    font-family: "Inter", Arial, sans-serif !important;
+  }
+
+  .temuan-page .brand-text b {
+    font-family: "Inter", Arial, sans-serif !important;
+
+    font-size: 15px !important;
+    line-height: 1.2 !important;
+    font-weight: 800 !important;
+
+    white-space: nowrap !important;
+  }
+
+  .temuan-page .brand-text span {
+    font-family: "Inter", Arial, sans-serif !important;
+
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+  }
+
+  .temuan-page .nav {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+
+    gap: 7px !important;
+
+    height: auto !important;
+
+    flex: 0 0 auto !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-weight: 600 !important;
+  }
+
+  .temuan-page .nav > a {
+    position: relative !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    min-height: 42px !important;
+    height: 42px !important;
+
+    padding: 10px 13px !important;
+
+    border: 0 !important;
+    border-radius: 10px !important;
+
+    background: transparent !important;
+
+    color: #5f6c64 !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0 !important;
+
+    text-decoration: none !important;
+    white-space: nowrap !important;
+
+    transition:
+      background .16s ease,
+      color .16s ease,
+      transform .16s ease !important;
+  }
+
+  .temuan-page .nav > a:hover {
+    background: #f1f6f2 !important;
+    color: #123d25 !important;
+  }
+
+  .temuan-page .nav > a.active {
+    min-width: 112px !important;
+
+    color: #08783d !important;
+
+    background: #edf8f1 !important;
+
+    box-shadow: inset 0 -2px 0 #0b9449 !important;
+    border-radius: 10px !important;
+  }
+
+  .temuan-page .profile-wrapper {
+    position: relative !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    flex: 0 0 auto !important;
+
+    margin-left: 0 !important;
+  }
+
+  .temuan-page .profile-button {
+    min-width: 145px !important;
+
+    width: auto !important;
+
+    height: 44px !important;
+    min-height: 44px !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 9px !important;
+
+    padding: 4px 10px 4px 7px !important;
+
+    border-radius: 12px !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-weight: 600 !important;
+  }
+
+  .temuan-page .profile-icon {
+    width: 34px !important;
+    height: 34px !important;
+
+    min-width: 34px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border-radius: 50% !important;
+  }
+
+  .temuan-page .profile-info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+
+    min-width: 0 !important;
+
+    gap: 0 !important;
+  }
+
+  .temuan-page .profile-info strong {
+    max-width: 85px !important;
+
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+  }
+
+  .temuan-page .profile-info > span {
+    margin-top: 4px !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 8px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+  }
+
+  .temuan-page .profile-chevron {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    margin-left: 2px !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 8px !important;
+    font-weight: 600 !important;
+
+    line-height: 1 !important;
+  }
+
+}
+
+        .mobile-menu-wrapper,
+        .mobile-menu-button {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .temuan-page .brand-text {
+            display: flex !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            flex-direction: column !important;
+            gap: 2px !important;
+          }
+
+          .temuan-page .brand-text b {
+            font-size: 12px !important;
+            line-height: 1.15 !important;
+            white-space: nowrap !important;
+          }
+
+          .temuan-page .brand-text span {
+            font-size: 8px !important;
+            line-height: 1.15 !important;
+            white-space: normal !important;
+          }
+
+          .temuan-page .nav {
+            position: fixed !important;
+            top: 66px !important;
+            left: 10px !important;
+            right: 10px !important;
+            display: none !important;
+            flex-direction: column !important;
+            height: auto !important;
+            width: auto !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            align-items: stretch !important;
+            gap: 5px !important;
+            padding: 10px !important;
+            background: #ffffff !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 30px rgba(24, 45, 32, 0.14) !important;
+            overflow: visible !important;
+            z-index: 1200 !important;
+          }
+
+          .temuan-page .nav.mobile-nav-open {
+            display: flex !important;
+            height: auto !important;
+            bottom: auto !important;
+            justify-content: flex-start !important;
+          }
+
+          .temuan-page .nav > a {
+            width: 100% !important;
+            min-height: 42px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 10px 12px !important;
+            border-radius: 9px !important;
+          }
+
+          .temuan-page .nav .profile-wrapper {
+            display: flex !important;
+            width: 100% !important;
+            margin-left: 0 !important;
+          }
+
+          .temuan-page .nav .profile-button {
+            width: 100% !important;
+            min-width: 0 !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            justify-content: flex-start !important;
+            padding: 6px 12px !important;
+            border-radius: 9px !important;
+          }
+
+          .temuan-page .nav .profile-info {
+            display: flex !important;
+          }
+
+          .temuan-page .nav .profile-popup {
+            position: fixed !important;
+            top: 61px !important;
+            right: 10px !important;
+            width: min(298px, calc(100vw - 20px)) !important;
+          }
+
+          .temuan-page .nav .nav-logout {
+            display: none !important;
+          }
+
+          .temuan-page .mobile-menu-wrapper {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex: 0 0 auto !important;
+          }
+
+          .temuan-page .mobile-menu-button {
+            width: 42px !important;
+            height: 42px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            padding: 0 !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 10px !important;
+            background: #ffffff !important;
+          }
+
+          .temuan-page .mobile-menu-button span {
+            display: block !important;
+            width: 20px !important;
+            height: 2px !important;
+            background: #087f3f !important;
+            border-radius: 999px !important;
+          }
+
+          .temuan-page .mobile-menu-button-open span:nth-child(1) {
+            transform: translateY(7px) rotate(45deg) !important;
+          }
+
+          .temuan-page .mobile-menu-button-open span:nth-child(2) {
+            opacity: 0 !important;
+          }
+
+          .temuan-page .mobile-menu-button-open span:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg) !important;
+          }
+        }
+
+        /* Keep the Data Temuan navbar identical to Form Inspeksi. */
+        .temuan-page .profile-button > .profile-avatar {
+          width: 34px !important;
+          height: 34px !important;
+          min-width: 34px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex: 0 0 34px !important;
+          border-radius: 50% !important;
+          background: #099447 !important;
+          color: #ffffff !important;
+          font-family: "Poppins", sans-serif !important;
+          font-size: 14px !important;
+          font-weight: 600 !important;
+        }
+
+        .temuan-page .profile-button > .profile-info {
+          min-width: 0 !important;
+          flex: 1 1 auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: center !important;
+          gap: 0 !important;
+          overflow: hidden !important;
+        }
+
+        .temuan-page .profile-info strong {
+          max-width: 85px !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          font-family: "Poppins", sans-serif !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          line-height: 1.05 !important;
+        }
+
+        .temuan-page .profile-info small {
+          margin-top: 4px !important;
+          color: #7b8780 !important;
+          font-family: "Poppins", sans-serif !important;
+          font-size: 8px !important;
+          font-weight: 600 !important;
+          line-height: 1.05 !important;
+        }
+
+        .temuan-page .profile-button > .profile-chevron {
+          margin-left: 2px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          color: #718078 !important;
+          font-family: "Poppins", sans-serif !important;
+          font-size: 8px !important;
+          line-height: 1 !important;
+          transform: translateY(-1px) !important;
+        }
+
+        .temuan-page .nav-logout {
+          min-height: 42px !important;
+          border: 1px solid #d9e3dc !important;
+          padding: 10px 15px !important;
+          border-radius: 10px !important;
+          background: #ffffff !important;
+          color: #304037 !important;
+          font-family: "Poppins", sans-serif !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          line-height: 1.2 !important;
+          white-space: nowrap !important;
+        }
+
+        .temuan-page .nav-logout:hover {
+          background: #f7faf8 !important;
+          color: #087f3e !important;
+          border-color: #cbd8cf !important;
+        }
+
+        @media (max-width: 768px) {
+          .temuan-page .topbar {
+            font-family: "Inter", Arial, sans-serif !important;
+            min-height: 66px !important;
+            height: 66px !important;
+            padding: 7px 11px !important;
+            gap: 8px !important;
+          }
+
+          .temuan-page .brand {
+            flex: 0 0 auto !important;
+            gap: 0 !important;
+          }
+
+          .temuan-page .brand .logo {
+            width: 82px !important;
+            height: 40px !important;
+            flex: 0 0 82px !important;
+          }
+
+          .temuan-page .brand .logo img {
+            width: 100% !important;
+            max-width: 82px !important;
+          }
+
+          .temuan-page .brand-text {
+            display: flex !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            flex-direction: column !important;
+            gap: 2px !important;
+            line-height: 1.15 !important;
+            font-family: "Inter", Arial, sans-serif !important;
+          }
+
+          .temuan-page .brand-text b {
+            font-size: 12px !important;
+            line-height: 1.15 !important;
+          }
+
+          .temuan-page .brand-text span {
+            font-size: 8px !important;
+            line-height: 1.15 !important;
+            white-space: normal !important;
+          }
+
+          .temuan-page .profile-button > .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            flex-basis: 28px !important;
+            font-size: 11px !important;
+          }
+
+          .temuan-page .profile-info strong {
+            font-size: 8px !important;
+          }
+
+          .temuan-page .profile-info small {
+            margin-top: 2px !important;
+            font-size: 6px !important;
+          }
+
+          .temuan-page .profile-button > .profile-chevron {
+            font-size: 6px !important;
+          }
+
+          .temuan-page .nav-logout {
+            min-height: 36px !important;
+            padding: 7px 9px !important;
+          }
+
+          .temuan-page .mobile-menu-button {
+            width: 42px !important;
+            height: 42px !important;
+            border-radius: 10px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .temuan-page .topbar {
+            min-height: 60px !important;
+            height: 60px !important;
+            padding: 7px 8px !important;
+            gap: 5px !important;
+          }
+
+          .temuan-page .brand .logo {
+            width: 82px !important;
+            height: 39px !important;
+            flex-basis: 82px !important;
+          }
+
+          .temuan-page .brand .logo img {
+            max-width: 82px !important;
+          }
+
+          .temuan-page .nav {
+            top: 60px !important;
+            max-width: 77vw !important;
+            gap: 3px !important;
+          }
+        }
+
+        @media (max-width: 650px) {
+          .temuan-page {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+          }
+
+          .temuan-page .topbar {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+          }
+
+          .temuan-page .brand {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            max-width: calc(100% - 52px) !important;
+          }
+
+          .temuan-page .brand-text {
+            min-width: 0 !important;
+            overflow: hidden !important;
+          }
+
+          .temuan-page .mobile-menu-wrapper {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex: 0 0 auto !important;
+          }
+
+          .temuan-page .mobile-menu-button {
+            position: static !important;
+            transform: none !important;
+          }
+
+          .temuan-page .page-content,
+          .temuan-page .workspace,
+          .temuan-page .main-column {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+          }
+
+          .temuan-page .filter-card {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 44px 12px 12px !important;
+            margin-bottom: 12px !important;
+            border-radius: 12px !important;
+          }
+
+          .temuan-page .filter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 12px 10px !important;
+            min-width: 0 !important;
+          }
+
+          .temuan-page .filter-grid > * {
+            min-width: 0 !important;
+            max-width: 100% !important;
+          }
+
+          .temuan-page .search-box {
+            min-width: 0 !important;
+          }
+
+          .temuan-page .filter-field label {
+            margin-bottom: 5px !important;
+            font-size: 9px !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .temuan-page .filter-field select,
+          .temuan-page .search-input {
+            box-sizing: border-box !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            height: 42px !important;
+            font-size: 12px !important;
+          }
+
+          .temuan-page .filter-refresh-top {
+            top: 8px !important;
+            right: 12px !important;
+            width: 30px !important;
+            height: 30px !important;
+          }
+
+          .temuan-page .filter-grid .search-box,
+          .temuan-page .filter-grid > .btn-primary {
+            grid-column: 1 / -1 !important;
+          }
+
+          .temuan-page .filter-grid > .btn {
+            box-sizing: border-box !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            min-height: 42px !important;
+            height: 42px !important;
+          }
+
+          .temuan-page .table-card {
+            min-width: 0 !important;
+            overflow: hidden !important;
+          }
+
+          .temuan-page .table-wrapper {
+            max-width: 100% !important;
+            overflow-x: auto !important;
+            overscroll-behavior-x: contain;
+          }
+        }
       `}</style>
 
       <main className="temuan-page">
@@ -2253,38 +3234,40 @@ export default function DataTemuanPage() {
 
             <Link
               href="/temuan"
-              className="logo"
+              className="brand-logo-link"
               aria-label="Data Temuan"
             >
-              <img
-                src="/ggf-estate-pg01.png"
-                alt="GGF Estate PG 01"
-              />
+              <div className="logo">
+                <img
+                  src="/ggf-estate-pg01.png"
+                  alt="Sistem Manajemen Informasi Estate PG1"
+                />
+              </div>
             </Link>
 
             <div className="brand-text">
               <b>Data Temuan</b>
-              <span>Estate PG 01</span>
+              <span>Sistem Manajemen Informasi Estate PG1</span>
             </div>
 
           </div>
 
           <nav
-            className="nav"
+            className={`nav ${showMobileNav ? "mobile-nav-open" : ""}`}
             aria-label="Navigasi utama"
           >
 
-            <Link href="/inspeksi">
+            <Link href="/inspeksi" className="nav-page">
               Form Inspeksi
             </Link>
 
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="nav-page">
               Dashboard
             </Link>
 
             <Link
               href="/temuan"
-              className="active"
+              className="nav-page active"
             >
               Data Temuan
             </Link>
@@ -2304,38 +3287,28 @@ export default function DataTemuanPage() {
                 }
               >
 
-                <span className="profile-icon">
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"
-                      fill="currentColor"
-                    />
-                  </svg>
+                <span className="profile-avatar">
+                  {(currentUser?.nama_lengkap || "U")
+                    .charAt(0)
+                    .toUpperCase()}
                 </span>
 
                 <span className="profile-info">
                   <strong>
                     {currentUser?.nama_lengkap ||
-                      "User"}
+                      "Pengguna"}
                   </strong>
 
-                  <span>
+                  <small>
                     {currentUser?.role ||
                       "-"}
-                  </span>
+                  </small>
                 </span>
 
                 <span
-                  className={`profile-chevron ${
-                    profileOpen
-                      ? "open"
-                      : ""
-                  }`}
+                  className="profile-chevron"
                 >
-                  ▾
+                  ▴
                 </span>
 
               </button>
@@ -2439,13 +3412,27 @@ export default function DataTemuanPage() {
 
             <button
               type="button"
-              className="btn"
+              className="nav-logout"
               onClick={handleLogout}
             >
               Logout
             </button>
 
           </nav>
+
+          <div className="mobile-menu-wrapper">
+            <button
+              type="button"
+              className={`mobile-menu-button ${showMobileNav ? "mobile-menu-button-open" : ""}`}
+              onClick={() => setShowMobileNav((value) => !value)}
+              aria-label={showMobileNav ? "Tutup menu navigasi" : "Buka menu navigasi"}
+              aria-expanded={showMobileNav}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+          </div>
 
         </header>
 
@@ -2473,6 +3460,17 @@ export default function DataTemuanPage() {
 
               <section className="filter-card">
 
+                <button
+                  type="button"
+                  className="btn filter-refresh-button filter-refresh-top"
+                  onClick={refreshData}
+                  disabled={loading}
+                  title="Refresh Data"
+                  aria-label="Refresh Data"
+                >
+                  <RefreshIcon />
+                </button>
+
                 <div className="filter-grid">
 
                   <div className="filter-field">
@@ -2483,9 +3481,12 @@ export default function DataTemuanPage() {
                     <select
                       value={periode}
                       onChange={(e) => {
-                        setPeriode(
-                          e.target.value
-                        );
+                        const value = e.target.value;
+                        setPeriode(value);
+                        if (value !== "Pilih Waktu") {
+                          setPeriodeDari("");
+                          setPeriodeSampai("");
+                        }
                         setPage(1);
                       }}
                     >
@@ -2504,8 +3505,48 @@ export default function DataTemuanPage() {
                       <option>
                         1 Tahun
                       </option>
+                      <option>
+                        Pilih Waktu
+                      </option>
                     </select>
                   </div>
+
+                  {periode === "Pilih Waktu" && (
+                    <>
+                      <div className="filter-field">
+                        <label>
+                          Dari
+                        </label>
+
+                        <input
+                          className="filter-date-input"
+                          type="date"
+                          value={periodeDari}
+                          onChange={(e) => {
+                            setPeriodeDari(e.target.value);
+                            setPage(1);
+                          }}
+                        />
+                      </div>
+
+                      <div className="filter-field">
+                        <label>
+                          Sampai
+                        </label>
+
+                        <input
+                          className="filter-date-input"
+                          type="date"
+                          value={periodeSampai}
+                          min={periodeDari || undefined}
+                          onChange={(e) => {
+                            setPeriodeSampai(e.target.value);
+                            setPage(1);
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="filter-field">
                     <label>
@@ -2633,7 +3674,6 @@ export default function DataTemuanPage() {
                     className="btn btn-primary"
                     onClick={() => {
                       setPage(1);
-                      loadData();
                     }}
                   >
                     Terapkan
@@ -2682,6 +3722,10 @@ export default function DataTemuanPage() {
                           No
                         </th>
 
+                        <th className="col-action mobile-leading-action">
+                          Detail
+                        </th>
+
                         <th className="col-date">
                           Tanggal Temuan
                         </th>
@@ -2703,10 +3747,10 @@ export default function DataTemuanPage() {
                         </th>
 
                         <th className="col-pelapor">
-                          Pelapor
+                          Terlapor
                         </th>
 
-                        <th className="col-action">
+                        <th className="col-action desktop-action">
                           Aksi
                         </th>
 
@@ -2718,7 +3762,7 @@ export default function DataTemuanPage() {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="9"
                             className="empty"
                           >
                             Memuat data temuan...
@@ -2728,7 +3772,7 @@ export default function DataTemuanPage() {
                         0 ? (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="9"
                             className="empty"
                           >
                             Belum ada data temuan.
@@ -2749,8 +3793,14 @@ export default function DataTemuanPage() {
                                 item?.status_temuan ||
                                   "OPEN"
                               ).toUpperCase();
+                            const detailButtonClass =
+                              itemStatus === "CLOSE"
+                                ? "detail-close"
+                                : isTemuanTerlambat(item)
+                                  ? "detail-late"
+                                  : "detail-open";
 
-                            const pelapor =
+                            const terlapor =
                               item?.master_mandor
                                 ?.nama_mandor ||
                               "-";
@@ -2764,6 +3814,20 @@ export default function DataTemuanPage() {
 
                                 <td className="col-no">
                                   {nomor}
+                                </td>
+
+                                <td className="col-action mobile-leading-action">
+                                  <button
+                                    type="button"
+                                    className={`icon-btn ${detailButtonClass}`}
+                                    title="Lihat Detail"
+                                    onClick={() => lihatDetail(item)}
+                                  >
+                                    <svg viewBox="0 0 24 24">
+                                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" strokeWidth="2" />
+                                      <circle cx="12" cy="12" r="2.7" fill="currentColor" />
+                                    </svg>
+                                  </button>
                                 </td>
 
                                 <td>
@@ -2811,11 +3875,11 @@ export default function DataTemuanPage() {
 
                                 <td>
                                   <div className="ellipsis">
-                                    {pelapor}
+                                    {terlapor}
                                   </div>
                                 </td>
 
-                                <td>
+                                <td className="desktop-action">
 
                                   <div className="action-buttons">
 
@@ -2823,7 +3887,7 @@ export default function DataTemuanPage() {
 
                                     <button
                                       type="button"
-                                      className="icon-btn green"
+                                      className={`icon-btn ${detailButtonClass}`}
                                       title="Lihat Detail"
                                       onClick={() =>
                                         lihatDetail(
@@ -3044,7 +4108,19 @@ export default function DataTemuanPage() {
             ================================================== */}
 
             {selectedTemuan && (
-              <aside className="side-column">
+              <div
+                className="detail-modal-overlay"
+                onMouseDown={(event) => {
+                  if (event.target === event.currentTarget) {
+                    tutupDetail();
+                  }
+                }}
+              >
+                <div
+                  className="detail-modal-content"
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
+                  <aside className="side-column">
 
                 {/* ==================================================
                     DETAIL TEMUAN
@@ -3177,15 +4253,14 @@ export default function DataTemuanPage() {
                       </span>
 
                       <span className="label">
-                        Pelapor
+                        Inspector
                       </span>
 
                       <span className="value">
                         :
                         {" "}
-                        {selectedTemuan
-                          ?.master_mandor
-                          ?.nama_mandor ||
+                        {selectedTemuan?.task_quiz?.inspector_names?.join(", ") ||
+                          selectedTemuan?.task_quiz?.inspector_ids?.join(", ") ||
                           "-"}
                       </span>
 
@@ -3400,6 +4475,32 @@ export default function DataTemuanPage() {
                             Pilih Foto
                           </button>
 
+                          <input
+                            ref={
+                              cameraInputRef
+                            }
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={
+                              handleFotoClose
+                            }
+                            style={{
+                              display:
+                                "none",
+                            }}
+                          />
+
+                          <button
+                            type="button"
+                            className="upload-button"
+                            onClick={() =>
+                              cameraInputRef.current?.click()
+                            }
+                          >
+                            Buka Kamera
+                          </button>
+
                           <span className="upload-name">
                             {fotoCloseName ||
                               "Belum ada foto dipilih"}
@@ -3436,6 +4537,13 @@ export default function DataTemuanPage() {
                                   fileInputRef.current
                                 ) {
                                   fileInputRef.current.value =
+                                    "";
+                                }
+
+                                if (
+                                  cameraInputRef.current
+                                ) {
+                                  cameraInputRef.current.value =
                                     "";
                                 }
                               }}
@@ -3482,7 +4590,9 @@ export default function DataTemuanPage() {
                     </section>
                   )}
 
-              </aside>
+                  </aside>
+                </div>
+              </div>
             )}
 
           </div>

@@ -9,14 +9,14 @@ async function main() {
       username: "budi.kabag",
       password: "123456",
       nama_lengkap: "Budi Santoso",
-      role: "KABAG",
+      role: "ADMIN",
     },
 
     {
       username: "andi.kasie",
       password: "123456",
       nama_lengkap: "Andi Wijaya",
-      role: "KASIE",
+      role: "INSPECTOR",
     },
 
     {

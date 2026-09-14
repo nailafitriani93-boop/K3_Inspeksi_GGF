@@ -16,6 +16,7 @@ const FORM_AWAL = {
   id_lokasi: "",
   id_mandor: "",
   id_aktivitas: "",
+  id_inspector: [],
   id_grup: "",
   deskripsi: "",
   latitude: "",
@@ -65,6 +66,7 @@ export default function Inspeksi() {
     wilayah: [],
     lokasi: [],
     mandor: [],
+    inspector: [],
   });
 
   const [f, setF] = useState(FORM_AWAL);
@@ -92,8 +94,19 @@ export default function Inspeksi() {
   const [savingAktivitas, setSavingAktivitas] = useState(false);
   const [deletingAktivitas, setDeletingAktivitas] = useState(false);
 
+  const [showInspectorTambah, setShowInspectorTambah] =
+    useState(false);
+
+  const [inspectorBaru, setInspectorBaru] = useState({
+    nama_pic: "",
+  });
+
+  const [savingInspector, setSavingInspector] = useState(false);
+  const [deletingInspector, setDeletingInspector] = useState(false);
+
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [successToast, setSuccessToast] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [loadingAwal, setLoadingAwal] = useState(false);
@@ -101,6 +114,11 @@ export default function Inspeksi() {
     useState(false);
 
   const [loggingOut, setLoggingOut] = useState(false);
+  const [currentUser, setCurrentUser] = useState({
+    nama_lengkap: "",
+    username: "",
+    role: "",
+  });
 
   /* =====================================================
      REVISI NAVBAR
@@ -109,6 +127,22 @@ export default function Inspeksi() {
   const [showProfile, setShowProfile] = useState(false);
 const [showMobileNav, setShowMobileNav] = useState(false);
 const profileRef = useRef(null);
+
+function tampilkanNotifikasiSukses(message) {
+  setSuccessToast(message);
+  window.setTimeout(() => {
+    setSuccessToast("");
+  }, 3500);
+}
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("k3_user");
+      if (stored) {
+        setCurrentUser(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     function handleOutsideClick(e) {
@@ -187,7 +221,9 @@ const profileRef = useRef(null);
   }
 
   async function ambilJson(url) {
-    const r = await fetch(url);
+    const r = await fetch(url, {
+      cache: "no-store",
+    });
     const text = await r.text();
 
     let d = {};
@@ -229,6 +265,11 @@ const profileRef = useRef(null);
       setF((old) => ({
         ...old,
         ...formDraft,
+        id_inspector: Array.isArray(formDraft.id_inspector)
+          ? formDraft.id_inspector
+          : formDraft.id_inspector
+          ? [String(formDraft.id_inspector)]
+          : [],
       }));
 
       if (Array.isArray(draftTemuan)) {
@@ -351,11 +392,13 @@ const profileRef = useRef(null);
       setMaster((old) => ({
         ...old,
         lokasi: [],
+        inspector: [],
       }));
 
       setF((old) => ({
         ...old,
         id_lokasi: "",
+        id_inspector: [],
       }));
 
       return;
@@ -371,13 +414,19 @@ const profileRef = useRef(null);
           id_lokasi: "",
         }));
 
-        const lokasi = await ambilJson(
-          `/api/master/lokasi?noWilayah=${f.no_wilayah}`
-        );
+        const [lokasi, inspector] = await Promise.all([
+          ambilJson(
+            `/api/master/lokasi?noWilayah=${f.no_wilayah}`
+          ),
+          ambilJson(
+            `/api/master/pic?noWilayah=${f.no_wilayah}`
+          ),
+        ]);
 
         setMaster((old) => ({
           ...old,
           lokasi,
+          inspector,
         }));
       } catch (e) {
         setErr(e.message);
@@ -385,6 +434,7 @@ const profileRef = useRef(null);
         setMaster((old) => ({
           ...old,
           lokasi: [],
+          inspector: [],
         }));
       } finally {
         setLoadingWilayahData(false);
@@ -522,6 +572,40 @@ const profileRef = useRef(null);
       fotoPreview: "",
       fotoError: "",
     });
+  }
+
+  function simpanDraft() {
+    try {
+      const draft = {
+        ...f,
+        selectedTemuan: selectedTemuan.map((item) => ({
+          id_grup: item.id_grup,
+          nama_grup: item.nama_grup,
+          deskripsi: item.deskripsi,
+          status: item.status || "OPEN",
+        })),
+        titikTersimpan,
+      };
+
+      delete draft.latitude;
+      delete draft.longitude;
+      delete draft.id_grup;
+      delete draft.deskripsi;
+
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify(draft)
+      );
+
+      const successMessage = "Draft inspeksi berhasil disimpan.";
+      setMsg(successMessage);
+      tampilkanNotifikasiSukses(successMessage);
+    } catch (error) {
+      setErr(
+        error?.message ||
+          "Draft inspeksi gagal disimpan."
+      );
+    }
   }
 
   function bukaInputFotoInspeksi(mode) {
@@ -857,6 +941,129 @@ const profileRef = useRef(null);
     }
   }
 
+  async function tambahInspector() {
+    const nama = inspectorBaru.nama_pic.trim();
+
+    if (!f.no_wilayah) {
+      setErr("Pilih wilayah terlebih dahulu.");
+      return;
+    }
+
+    if (!nama) {
+      setErr("Nama inspector wajib diisi.");
+      return;
+    }
+
+    setSavingInspector(true);
+    setErr("");
+    setMsg("");
+
+    try {
+      const r = await fetch("/api/master/pic", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nama_pic: nama,
+          no_wilayah: f.no_wilayah,
+        }),
+      });
+
+      const d = await r.json();
+
+      if (!r.ok) {
+        throw new Error(
+          d.error || "Gagal menambah inspector"
+        );
+      }
+
+      const inspectorTerbaru = await ambilJson(
+        `/api/master/pic?noWilayah=${f.no_wilayah}`
+      );
+
+      setMaster((old) => ({
+        ...old,
+        inspector: inspectorTerbaru,
+      }));
+
+      setF((old) => ({
+        ...old,
+        id_inspector: [String(d.id_pic)],
+      }));
+
+      setInspectorBaru({ nama_pic: "" });
+      setShowInspectorTambah(false);
+      setMsg(`Inspector "${d.nama_pic}" berhasil ditambahkan.`);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSavingInspector(false);
+    }
+  }
+
+  async function hapusInspector() {
+    if (f.id_inspector.length !== 1) {
+      setErr("Pilih inspector yang ingin dihapus terlebih dahulu.");
+      return;
+    }
+
+    const inspectorId = f.id_inspector[0];
+    const inspectorDipilih = master.inspector.find(
+      (item) => String(item.id_pic) === String(inspectorId)
+    );
+
+    if (!inspectorDipilih) {
+      setErr("Inspector yang dipilih tidak ditemukan.");
+      return;
+    }
+
+    const yakin = window.confirm(
+      `Yakin ingin menghapus inspector "${inspectorDipilih.nama_pic}"?\n\nInspector akan dihapus dari daftar wilayah ini.`
+    );
+
+    if (!yakin) return;
+
+    setDeletingInspector(true);
+    setErr("");
+    setMsg("");
+
+    try {
+      const r = await fetch(
+        `/api/master/pic?id=${encodeURIComponent(inspectorId)}`,
+        { method: "DELETE" }
+      );
+
+      const d = await r.json();
+
+      if (!r.ok) {
+        throw new Error(
+          d.error || "Gagal menghapus inspector"
+        );
+      }
+
+      const inspectorTerbaru = await ambilJson(
+        `/api/master/pic?noWilayah=${f.no_wilayah}`
+      );
+
+      setMaster((old) => ({
+        ...old,
+        inspector: inspectorTerbaru,
+      }));
+
+      setF((old) => ({
+        ...old,
+        id_inspector: [],
+      }));
+
+      setMsg(`Inspector "${inspectorDipilih.nama_pic}" berhasil dihapus.`);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setDeletingInspector(false);
+    }
+  }
+
   /* =====================================================
      SUBMIT
   ===================================================== */
@@ -931,7 +1138,12 @@ const profileRef = useRef(null);
               longitude:
                 longitudeTersimpan,
 
-              task_quiz: [],
+              task_quiz: {
+                inspector_ids: f.id_inspector,
+                inspector_names: master.inspector
+                  .filter((item) => f.id_inspector.includes(String(item.id_pic)))
+                  .map((item) => item.nama_pic),
+              },
 
               foto_base64:
                 fotoInspeksi.fotoDataUrl,
@@ -966,9 +1178,9 @@ const profileRef = useRef(null);
           );
         }
 
-        setMsg(
-          `Inspeksi berhasil disimpan.`
-        );
+        const successMessage = "Inspeksi berhasil disimpan.";
+        setMsg(successMessage);
+        tampilkanNotifikasiSukses(successMessage);
 
         try {
           localStorage.removeItem(
@@ -976,16 +1188,7 @@ const profileRef = useRef(null);
           );
         } catch {}
 
-        setF((x) => ({
-          ...x,
-          id_lokasi: "",
-          id_grup: "",
-          deskripsi: "",
-          latitude: "",
-          longitude: "",
-          hasil_inspeksi:
-            "TIDAK_ADA_TEMUAN",
-        }));
+        setF(FORM_AWAL);
 
         setSelectedTemuan([]);
 
@@ -1016,20 +1219,6 @@ const profileRef = useRef(null);
     if (!selectedTemuan.length) {
       setErr(
         "Pilih minimal satu grup temuan terlebih dahulu."
-      );
-
-      return;
-    }
-
-    const temuanTanpaDeskripsi =
-      selectedTemuan.find(
-        (item) =>
-          !item.deskripsi.trim()
-      );
-
-    if (temuanTanpaDeskripsi) {
-      setErr(
-        `Deskripsi temuan untuk grup "${temuanTanpaDeskripsi.nama_grup}" wajib diisi.`
       );
 
       return;
@@ -1092,7 +1281,8 @@ const profileRef = useRef(null);
                 item.id_grup,
 
               deskripsi:
-                item.deskripsi.trim(),
+                item.deskripsi.trim() ||
+                "Deskripsi temuan akan dilengkapi.",
 
               status,
 
@@ -1102,7 +1292,12 @@ const profileRef = useRef(null);
               longitude:
                 longitudeTersimpan,
 
-              task_quiz: [],
+              task_quiz: {
+                inspector_ids: f.id_inspector,
+                inspector_names: master.inspector
+                  .filter((item) => f.id_inspector.includes(String(item.id_pic)))
+                  .map((item) => item.nama_pic),
+              },
 
               foto_base64:
                 item.fotoDataUrl,
@@ -1158,9 +1353,10 @@ const profileRef = useRef(null);
           .toISOString()
           .slice(0, 10);
 
-      setMsg(
-        `${berhasil} temuan berhasil disimpan. Batas waktu tindak lanjut untuk temuan OPEN (7 hari).`
-      );
+      const successMessage =
+        `${berhasil} temuan berhasil disimpan. Batas waktu tindak lanjut untuk temuan OPEN (7 hari).`;
+      setMsg(successMessage);
+      tampilkanNotifikasiSukses(successMessage);
 
       try {
         localStorage.removeItem(
@@ -1168,16 +1364,7 @@ const profileRef = useRef(null);
         );
       } catch {}
 
-      setF((x) => ({
-        ...x,
-        id_lokasi: "",
-        id_grup: "",
-        deskripsi: "",
-        latitude: "",
-        longitude: "",
-        hasil_inspeksi:
-          "TIDAK_ADA_TEMUAN",
-      }));
+      setF(FORM_AWAL);
 
       setSelectedTemuan([]);
 
@@ -1228,7 +1415,7 @@ const profileRef = useRef(null);
             </b>
 
             <span>
-              Estate PG 01
+              Sistem Informasi Manajemen Estate PG1
             </span>
           </div>
 
@@ -1287,17 +1474,17 @@ const profileRef = useRef(null);
             >
 
               <span className="profile-avatar">
-                N
+                {(currentUser.nama_lengkap || "U").charAt(0).toUpperCase()}
               </span>
 
               <span className="profile-info">
 
                 <strong>
-                  Nirwati
+                  {currentUser.nama_lengkap || "Pengguna"}
                 </strong>
 
                 <small>
-                  KASIE
+                  {(currentUser.role || "").replaceAll("_", " ")}
                 </small>
 
               </span>
@@ -1315,17 +1502,17 @@ const profileRef = useRef(null);
                 <div className="profile-popup-head">
 
                   <div className="profile-popup-avatar">
-                    N
+                    {(currentUser.nama_lengkap || "U").charAt(0).toUpperCase()}
                   </div>
 
                   <div className="profile-popup-name">
 
                     <strong>
-                      Nirwati
+                      {currentUser.nama_lengkap || "Pengguna"}
                     </strong>
 
                     <span>
-                      KASIE
+                      {(currentUser.role || "").replaceAll("_", " ")}
                     </span>
 
                   </div>
@@ -1341,7 +1528,7 @@ const profileRef = useRef(null);
                   </span>
 
                   <strong>
-                    Nirwati
+                    {currentUser.nama_lengkap || "-"}
                   </strong>
 
                 </div>
@@ -1353,7 +1540,7 @@ const profileRef = useRef(null);
                   </span>
 
                   <strong>
-                    nirwati.kasie
+                    {currentUser.username || "-"}
                   </strong>
 
                 </div>
@@ -1365,7 +1552,7 @@ const profileRef = useRef(null);
                   </span>
 
                   <strong className="role-badge">
-                    KASIE
+                    {(currentUser.role || "-").replaceAll("_", " ")}
                   </strong>
 
                 </div>
@@ -1442,6 +1629,12 @@ const profileRef = useRef(null);
         </div>
 
       </header>
+
+      {successToast && (
+        <div className="success-toast" role="status">
+          ✓ {successToast}
+        </div>
+      )}
 
       <div className="main">
 
@@ -1746,6 +1939,131 @@ const profileRef = useRef(null);
 
             </div>
 
+            <div className="field">
+
+              <label>
+                Inspector
+              </label>
+
+              <div className="selectrow">
+
+                <SearchSelect
+                  label=""
+                  value={
+                    f.id_inspector
+                  }
+                  multiple
+                  onChange={(x) =>
+                    set(
+                      "id_inspector",
+                      x
+                    )
+                  }
+                  options={
+                    master.inspector
+                  }
+                  valueKey="id_pic"
+                  labelKey="nama_pic"
+                  disabled={!f.no_wilayah || loadingWilayahData}
+                  placeholder={
+                    !f.no_wilayah
+                      ? "Pilih wilayah terlebih dahulu..."
+                      : loadingWilayahData
+                      ? "Memuat inspector..."
+                      : "Cari inspector..."
+                  }
+                />
+
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() =>
+                    setShowInspectorTambah(
+                      (x) => !x
+                    )
+                  }
+                >
+                  ＋ Tambah
+                </button>
+
+                <button
+                  type="button"
+                  className="btn danger"
+                  onClick={
+                    hapusInspector
+                  }
+                  disabled={
+                    f.id_inspector.length !== 1 ||
+                    deletingInspector
+                  }
+                >
+                  {deletingInspector
+                    ? "Menghapus..."
+                    : "🗑 Hapus"}
+                </button>
+
+              </div>
+
+              {showInspectorTambah && (
+                <div className="inlinebox">
+
+                  <input
+                    value={
+                      inspectorBaru.nama_pic
+                    }
+                    onChange={(e) =>
+                      setInspectorBaru({
+                        nama_pic:
+                          e.target.value,
+                      })
+                    }
+                    placeholder="Nama inspector"
+                    autoFocus
+                  />
+
+                  <div className="actions">
+
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={
+                        tambahInspector
+                      }
+                      disabled={
+                        savingInspector
+                      }
+                    >
+                      {savingInspector
+                        ? "Menyimpan..."
+                        : "Simpan Inspector"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={() => {
+                        setShowInspectorTambah(
+                          false
+                        );
+
+                        setInspectorBaru({
+                          nama_pic:
+                            "",
+                        });
+
+                        setErr("");
+                      }}
+                    >
+                      Batal
+                    </button>
+
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
             {/* =====================================================
                 HASIL INSPEKSI
             ===================================================== */}
@@ -1902,10 +2220,6 @@ const profileRef = useRef(null);
                         </span>
                       </label>
 
-                      <div className="muted small">
-                        Foto digunakan sebagai bukti bahwa inspeksi dan sosialisasi telah dilakukan meskipun tidak ditemukan temuan.
-                      </div>
-
                     </div>
 
                     <span className="inspection-status selesai">
@@ -2034,10 +2348,6 @@ const profileRef = useRef(null);
                           Grup Temuan
                         </label>
 
-                        <div className="muted small">
-                          Checklist semua jenis temuan yang ditemukan. Setiap temuan wajib memiliki deskripsi, foto, dan status OPEN/CLOSE.
-                        </div>
-
                       </div>
 
                       <div className="temuan-count">
@@ -2083,6 +2393,11 @@ const profileRef = useRef(null);
                                     selectedIndex
                                   ]
                                 : null;
+
+                            const fotoTemuan =
+                              item?.fotoPreview ||
+                              item?.fotoDataUrl ||
+                              "";
 
                             return (
 
@@ -2278,6 +2593,31 @@ const profileRef = useRef(null);
                                               }.
                                             </div>
 
+                                            {fotoTemuan && (
+
+                                              <div className="fotopreview temuan-foto-preview">
+
+                                                <img
+                                                  src={fotoTemuan}
+                                                  alt={`Pratinjau foto ${item.nama_grup}`}
+                                                />
+
+                                                <button
+                                                  type="button"
+                                                  className="btn secondary small"
+                                                  onClick={() =>
+                                                    hapusFotoTemuan(
+                                                      selectedIndex
+                                                    )
+                                                  }
+                                                >
+                                                  Hapus Foto
+                                                </button>
+
+                                              </div>
+
+                                            )}
+
                                           </div>
 
                                           {item.fotoError && (
@@ -2286,33 +2626,6 @@ const profileRef = useRef(null);
                                               {
                                                 item.fotoError
                                               }
-                                            </div>
-
-                                          )}
-
-                                          {item.fotoPreview && (
-
-                                            <div className="fotopreview">
-
-                                              <img
-                                                src={
-                                                  item.fotoPreview
-                                                }
-                                                alt={`Pratinjau foto ${item.nama_grup}`}
-                                              />
-
-                                              <button
-                                                type="button"
-                                                className="btn secondary small"
-                                                onClick={() =>
-                                                  hapusFotoTemuan(
-                                                    selectedIndex
-                                                  )
-                                                }
-                                              >
-                                                Hapus Foto
-                                              </button>
-
                                             </div>
 
                                           )}
@@ -2486,12 +2799,6 @@ const profileRef = useRef(null);
                         )}
                       </strong>
 
-                      <div className="small gps-status">
-                        {titikTersimpan.latitude
-                          ? "Titik dikunci dan tidak mengikuti perpindahan Anda."
-                          : "Titik belum dikunci. Simpan titik ini sebelum menyimpan inspeksi."}
-                      </div>
-
                     </div>
 
                     <div className="gps-actions">
@@ -2603,6 +2910,15 @@ const profileRef = useRef(null);
             <div className="actions submit-actions">
 
               <button
+                className="btn secondary"
+                type="button"
+                onClick={simpanDraft}
+                disabled={submitting}
+              >
+                Simpan Draft
+              </button>
+
+              <button
                 className="btn submit-btn"
                 type="submit"
                 disabled={submitting}
@@ -2658,9 +2974,9 @@ const profileRef = useRef(null);
 
       <style jsx global>{`
 
-        @import url(
-          'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600&display=swap'
-        );
+     @import url(
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap'
+);
 
         :root {
           --green-900: #0d2618;
@@ -3737,6 +4053,24 @@ const profileRef = useRef(null);
           font-size: 13px;
         }
 
+        .success-toast {
+          position: fixed;
+          top: 82px;
+          left: 50%;
+          z-index: 100000;
+          width: min(calc(100% - 32px), 460px);
+          transform: translateX(-50%);
+          padding: 13px 18px;
+          border: 1px solid #b9dfc4;
+          border-radius: 12px;
+          background: #eefaf2;
+          box-shadow: 0 10px 26px rgba(24, 70, 40, 0.18);
+          color: #166b39;
+          font-size: 13px;
+          font-weight: 700;
+          text-align: center;
+        }
+
         .temuan-card-title span {
           margin-top: 2px;
           color: var(--text-muted);
@@ -3997,6 +4331,24 @@ const profileRef = useRef(null);
           border: 1px solid #dce5de;
         }
 
+        .temuan-photo .fotopreview {
+          display: flex;
+          visibility: visible;
+          opacity: 1;
+        }
+
+        .temuan-foto-preview {
+          width: 100%;
+          min-height: 120px;
+        }
+
+        .temuan-foto-preview img {
+          display: block;
+          width: 260px;
+          min-height: 120px;
+          background: #eef4ef;
+        }
+
         .submit-area {
           margin-top: 26px;
           padding-top: 22px;
@@ -4186,7 +4538,24 @@ const profileRef = useRef(null);
           }
 
           .brand-text {
-            display: none !important;
+            display: flex !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            flex-direction: column !important;
+            gap: 2px !important;
+            line-height: 1.15 !important;
+          }
+
+          .brand-text b {
+            font-size: 12px !important;
+            line-height: 1.15 !important;
+            white-space: nowrap !important;
+          }
+
+          .brand-text span {
+            font-size: 8px !important;
+            line-height: 1.15 !important;
+            white-space: normal !important;
           }
 
          .nav {
@@ -4271,7 +4640,33 @@ const profileRef = useRef(null);
   transform: translateY(-7px) rotate(-45deg) !important;
 }
 
-.nav .profile-wrapper,
+.nav .profile-wrapper {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.nav .profile-button {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  justify-content: flex-start !important;
+  padding: 6px 12px !important;
+  border-radius: 9px !important;
+}
+
+.nav .profile-info {
+  display: flex !important;
+}
+
+.nav .profile-popup {
+  position: fixed !important;
+  top: 61px !important;
+  right: 10px !important;
+  width: min(298px, calc(100vw - 20px)) !important;
+}
+
 .nav .nav-logout {
   display: none !important;
 }
@@ -4632,6 +5027,18 @@ const profileRef = useRef(null);
             width: 100% !important;
           }
 
+          .submit-actions {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+            width: 100% !important;
+            gap: 8px !important;
+          }
+
+          .submit-actions .btn {
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
           .navigation-card {
             width: 100% !important;
             margin-top: 10px !important;
@@ -4768,6 +5175,227 @@ const profileRef = useRef(null);
           }
 
         }
+/* =========================================================
+   NAVBAR DESKTOP — SAMAKAN DENGAN DASHBOARD
+   HANYA DESKTOP, MOBILE TIDAK DIUBAH
+   ========================================================= */
+@media (min-width: 901px) {
+  .topbar {
+    min-height: 78px !important;
+    height: 78px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 20px !important;
+    padding: 10px clamp(18px, 4vw, 54px) !important;
+  }
+
+  .brand {
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 12px !important;
+
+    min-width: 0 !important;
+    flex: 0 1 auto !important;
+  }
+
+  .brand-logo-link {
+    display: flex !important;
+    align-items: center !important;
+
+    text-decoration: none !important;
+    flex-shrink: 0 !important;
+  }
+
+  .logo {
+    width: 110px !important;
+    height: 52px !important;
+
+    flex: 0 0 110px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    overflow: hidden !important;
+  }
+
+  .logo img {
+    display: block !important;
+    width: 100% !important;
+    max-width: 110px !important;
+    height: auto !important;
+
+    object-fit: contain !important;
+  }
+
+  .brand-text {
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 2px !important;
+
+    min-width: 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  .brand-text b {
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+  }
+
+  .brand-text span {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+  }
+
+  .nav {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+
+    gap: 7px !important;
+
+    flex: 0 0 auto !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-weight: 600 !important;
+  }
+
+  .nav-page {
+    position: relative !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    min-height: 42px !important;
+
+    border: 0 !important;
+    border-radius: 10px !important;
+
+    padding: 10px 13px !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0 !important;
+
+    white-space: nowrap !important;
+  }
+
+  .nav-page.active {
+    min-width: 112px !important;
+  }
+
+  .profile-wrapper {
+    position: relative !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    flex: 0 0 auto !important;
+  }
+
+  .profile-button {
+    min-width: 145px !important;
+    width: auto !important;
+
+    height: 44px !important;
+    min-height: 44px !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 9px !important;
+
+    padding: 4px 10px 4px 7px !important;
+
+    border-radius: 12px !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-weight: 600 !important;
+  }
+
+  .profile-avatar {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+  }
+
+  .profile-button-text {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+
+    gap: 0 !important;
+
+    overflow: hidden !important;
+  }
+
+  .profile-button-text strong {
+    font-family: "Poppins", sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.05 !important;
+
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .profile-button-text small {
+    margin-top: 4px !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 8px !important;
+    font-weight: 600 !important;
+    line-height: 1.05 !important;
+  }
+
+  .profile-chevron {
+    margin-left: 2px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    font-size: 8px !important;
+    line-height: 1 !important;
+
+    transform: translateY(-1px) !important;
+  }
+
+  .nav-logout {
+    min-height: 42px !important;
+
+    padding: 10px 15px !important;
+
+    border-radius: 10px !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+
+    white-space: nowrap !important;
+  }
+}
 
       `}</style>
 

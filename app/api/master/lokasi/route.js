@@ -28,6 +28,7 @@ export async function GET(req) {
         ml.id_lokasi,
         ml.nama_lokasi,
         ml.wilayah_id,
+        mw.no_wilayah,
         mw.nama_wilayah
       FROM public.master_lokasi ml
       INNER JOIN public.master_wilayah mw
@@ -47,8 +48,16 @@ export async function GET(req) {
           row.nama_wilayah ?? ""
         ).trim();
 
+      const noWilayah = String(
+        row.no_wilayah ?? ""
+      ).trim();
+
       if (!namaWilayah) {
         return false;
+      }
+
+      if (noWilayah && wilayahValue === noWilayah) {
+        return true;
       }
 
       /*
@@ -86,6 +95,13 @@ export async function GET(req) {
         namaWilayah
           .toLowerCase()
           .replace(/[^a-z]/g, "");
+
+      if (
+        wilayahValue.toLowerCase() ===
+        normal
+      ) {
+        return true;
+      }
 
       /*
        * BENGKEL

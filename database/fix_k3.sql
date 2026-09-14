@@ -20,7 +20,7 @@ SET no_wilayah = NULLIF(
 FROM public.master_wilayah mw
 WHERE mw.id_wilayah = t.id_wilayah
   AND t.no_wilayah IS NULL
-  AND NULLIF(regexp_replace(mw.nama_wilayah, '[^0-9]', '', 'g'), '')::int BETWEEN 1 AND 7;
+  AND NULLIF(regexp_replace(mw.nama_wilayah, '[^0-9]', '', 'g'), '')::int BETWEEN 1 AND 11;
 
 ALTER TABLE public.temuan_k3 DROP CONSTRAINT IF EXISTS temuan_k3_status_check;
 ALTER TABLE public.temuan_k3
@@ -30,7 +30,7 @@ ALTER TABLE public.temuan_k3
 ALTER TABLE public.temuan_k3 DROP CONSTRAINT IF EXISTS temuan_k3_no_wilayah_check;
 ALTER TABLE public.temuan_k3
   ADD CONSTRAINT temuan_k3_no_wilayah_check
-  CHECK (no_wilayah BETWEEN 1 AND 7);
+  CHECK (no_wilayah BETWEEN 1 AND 11);
 
 CREATE INDEX IF NOT EXISTS idx_temuan_k3_tanggal ON public.temuan_k3 (tanggal_temuan);
 CREATE INDEX IF NOT EXISTS idx_temuan_k3_status ON public.temuan_k3 (status_temuan);

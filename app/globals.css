@@ -1063,6 +1063,14 @@
   text-align: left;
 }
 
+.k3d-detail-mobile {
+  display: none;
+}
+
+.k3d-detail-desktop {
+  display: table-cell;
+}
+
 .k3d-description-cell {
   min-width: 260px;
   max-width: 400px;
@@ -1158,8 +1166,63 @@
   font-size: 14px;
 }
 
-/* =========================================================
-   RESPONSIVE TABLET
+   .k3d-dashboard-bottom-navigation {
+     width: 100%;
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+     gap: 12px;
+     margin: 5px 0 0;
+   }
+
+   .k3d-dashboard-back-button,
+   .k3d-dashboard-next-button {
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     min-height: 40px;
+     min-width: 48px;
+     padding: 0 18px;
+     border-radius: 8px;
+     font-size: 12px;
+     font-weight: 700;
+     text-decoration: none;
+     transition: background 0.2s ease, transform 0.2s ease;
+   }
+
+   .k3d-dashboard-back-button,
+   .k3d-dashboard-next-button {
+     font-size: 12px;
+     line-height: 1;
+   }
+
+   .k3d-dashboard-back-button {
+     border: 1px solid #a8d5af;
+     background: #dff3e2;
+     color: #287b36;
+   }
+
+   .k3d-dashboard-back-button:hover {
+     background: #ccebcf;
+   }
+
+   .k3d-dashboard-next-button {
+     border: 1px solid #247531;
+     background: #2d873b;
+     color: #ffffff;
+   }
+
+   .k3d-dashboard-next-button:hover {
+     background: #247531;
+   }
+
+   .k3d-dashboard-back-button:active,
+   .k3d-dashboard-next-button:active {
+     transform: scale(0.98);
+   }
+
+   /* =========================================================
+      RESPONSIVE TABLET
    ========================================================= */
 
 @media (max-width: 1200px) {
@@ -1215,6 +1278,14 @@
    ========================================================= */
 
 @media (max-width: 768px) {
+  .k3d-detail-mobile {
+    display: table-cell;
+  }
+
+  .k3d-detail-desktop {
+    display: none;
+  }
+
   .k3d-header {
     min-height: auto;
 
@@ -1333,7 +1404,9 @@
 
   .k3d-summary-grid {
     grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+      repeat(5, minmax(132px, 1fr));
+
+    overflow-x: auto;
 
     gap: 10px;
   }
@@ -1452,6 +1525,18 @@
    ========================================================= */
 
 @media (max-width: 480px) {
+  .k3d-dashboard-bottom-navigation {
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .k3d-dashboard-back-button,
+  .k3d-dashboard-next-button {
+    flex: 1 1 0;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
   .k3d-title-area h1 {
     font-size: 14px;
   }
@@ -1483,7 +1568,10 @@
   }
 
   .k3d-summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      repeat(5, minmax(132px, 1fr));
+
+    overflow-x: auto;
   }
 
   .k3d-summary-card {

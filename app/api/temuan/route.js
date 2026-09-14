@@ -355,27 +355,27 @@ export async function GET(req) {
           t.id_temuan DESC
       `);
 
-    return Response.json(
-      serializeBigInt(
-        rows.map((r) => ({
-          ...r,
+    return Response.json({
+  data: serializeBigInt(
+    rows.map((r) => ({
+      ...r,
 
-          nama_wilayah:
-            r.nama_wilayah ||
-            (
-              r.no_wilayah !== null &&
-              r.no_wilayah !== undefined
-                ? `Wilayah ${r.no_wilayah}`
-                : null
-            ),
+      nama_wilayah:
+        r.nama_wilayah ||
+        (
+          r.no_wilayah !== null &&
+          r.no_wilayah !== undefined
+            ? `Wilayah ${r.no_wilayah}`
+            : null
+        ),
 
-          ...hitungDeadline(
-            r.tanggal_temuan,
-            r.status_temuan
-          ),
-        }))
-      )
-    );
+      ...hitungDeadline(
+        r.tanggal_temuan,
+        r.status_temuan
+      ),
+    }))
+  ),
+});
 
   } catch (e) {
     console.error(
@@ -892,17 +892,9 @@ export async function POST(req) {
         b.deskripsi ?? ""
       ).trim();
 
-    if (!deskripsi) {
-      return Response.json(
-        {
-          error:
-            "Deskripsi temuan wajib diisi",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
+    const deskripsiTersimpan =
+      deskripsi ||
+      "Deskripsi temuan akan dilengkapi.";
 
     /* =====================================================
        SIMPAN FOTO
@@ -971,7 +963,7 @@ export async function POST(req) {
 
             ${idGrup},
 
-            ${deskripsi},
+            ${deskripsiTersimpan},
 
             ${latitude},
 
@@ -982,9 +974,8 @@ export async function POST(req) {
             ${statusTemuan},
 
             ${
-              Array.isArray(
-                b.task_quiz
-              )
+              b.task_quiz &&
+              typeof b.task_quiz === "object"
                 ? JSON.stringify(
                     b.task_quiz
                   )
@@ -1103,6 +1094,12 @@ export async function PATCH(req) {
       }
     }
 
+    const taskQuiz =
+      b.task_quiz &&
+      typeof b.task_quiz === "object"
+        ? JSON.stringify(b.task_quiz)
+        : null;
+
     /* =====================================================
        UPDATE TEMUAN
     ===================================================== */
@@ -1111,15 +1108,7 @@ export async function PATCH(req) {
       await prisma.$queryRaw`
         UPDATE public.temuan_k3
 
-        SET
-
-          status_temuan =
-            ${b.status_temuan},
-
-          closed_at =
-            CASE
-              WHEN
-                ${b.status_temuan} =
+            ${taskQuiz}::jsonb
                 'CLOSE'
               THEN
                 CURRENT_TIMESTAMP

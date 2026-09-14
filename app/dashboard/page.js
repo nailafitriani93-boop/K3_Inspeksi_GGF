@@ -39,10 +39,90 @@ function monthRange(month) {
   };
 }
 
+function isApiDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+}
+
 function formatNumber(value) {
   return new Intl.NumberFormat("id-ID").format(Number(value || 0));
 }
 
+function CustomDropdown({
+  value,
+  onChange,
+  options,
+  placeholder,
+}) {
+  return (
+    <div
+      className="k3d-dropdown"
+      style={{
+        position: "relative",
+        width: "150px",
+        minWidth: "150px",
+      }}
+    >
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="k3d-dropdown-button"
+        style={{
+          width: "100%",
+          height: "38px",
+          padding: "0 34px 0 11px",
+          appearance: "none",
+          WebkitAppearance: "none",
+          MozAppearance: "none",
+          cursor: "pointer",
+        }}
+      >
+        {options && options.length > 0 ? (
+          options.map((option, index) => (
+            <option
+              key={`${String(option.value)}-${index}`}
+              value={option.value}
+            >
+              {option.label}
+            </option>
+          ))
+        ) : (
+          <option value="">
+            {placeholder || "Tidak ada pilihan"}
+          </option>
+        )}
+      </select>
+
+      <span
+        className="k3d-dropdown-arrow"
+        style={{
+          position: "absolute",
+          top: "50%",
+          right: "10px",
+          transform: "translateY(-50%)",
+          pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M7 10L12 15L17 10"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    </div>
+  );
+}
 function formatPercent(value) {
   const n = Number(value || 0);
 
@@ -467,6 +547,9 @@ export default function Dashboard() {
   const [profileOpen, setProfileOpen] =
     useState(false);
 
+  const [showMobileNav, setShowMobileNav] =
+    useState(false);
+
   const [user, setUser] = useState({
     nama_lengkap: "Haris",
     role: "Mandor",
@@ -551,22 +634,28 @@ export default function Dashboard() {
     };
   }, [selectedOpen]);
 
-  function activeRange() {
-    if (scope === "day") {
+  function activeRange(filters = {}) {
+    const currentScope = filters.scope ?? scope;
+    const currentDay = filters.selectedDay ?? selectedDay;
+    const currentMonth = filters.month ?? month;
+    const currentFrom = filters.from ?? from;
+    const currentTo = filters.to ?? to;
+
+    if (currentScope === "day") {
       return {
-        from: selectedDay,
-        to: selectedDay,
+        from: currentDay,
+        to: currentDay,
       };
     }
 
-    if (scope === "month") {
-      return monthRange(month);
+    if (currentScope === "month") {
+      return monthRange(currentMonth);
     }
 
-    if (scope === "range") {
+    if (currentScope === "range") {
       return {
-        from,
-        to,
+        from: currentFrom,
+        to: currentTo,
       };
     }
 
@@ -613,11 +702,11 @@ export default function Dashboard() {
     loadMasterWilayah();
   }, []);
 
-  function queryString() {
+  function queryString(filters = {}) {
     const {
       from: activeFrom,
       to: activeTo,
-    } = activeRange();
+    } = activeRange(filters);
 
     const params = new URLSearchParams();
 
@@ -629,21 +718,34 @@ export default function Dashboard() {
       params.set("to", activeTo);
     }
 
-    if (noWilayah) {
+    const currentWilayah = filters.noWilayah ?? noWilayah;
+
+    if (currentWilayah) {
       params.set(
         "noWilayah",
-        noWilayah
+        currentWilayah
       );
     }
 
     return params.toString();
   }
 
-  async function load() {
+  function currentFilters() {
+    return {
+      scope,
+      selectedDay,
+      month,
+      from,
+      to,
+      noWilayah,
+    };
+  }
+
+  async function load(filters = {}) {
     const {
       from: activeFrom,
       to: activeTo,
-    } = activeRange();
+    } = activeRange(filters);
 
     if (
       activeFrom &&
@@ -657,11 +759,19 @@ export default function Dashboard() {
       return;
     }
 
+    if (
+      (activeFrom && !isApiDate(activeFrom)) ||
+      (activeTo && !isApiDate(activeTo))
+    ) {
+      setErr("Format tanggal filter tidak valid.");
+      return;
+    }
+
     try {
       setLoading(true);
       setErr("");
 
-      const q = queryString();
+      const q = queryString(filters);
 
       const urls = [
         `/api/dashboard/summary${
@@ -788,26 +898,53 @@ export default function Dashboard() {
   }, []);
 
   function refreshData() {
-    load();
+    const defaults = {
+      scope: "all",
+      selectedDay: localDate(),
+      month: localDate().slice(0, 7),
+      from: "",
+      to: "",
+      noWilayah: "",
+    };
+
+    setScope(defaults.scope);
+    setSelectedDay(defaults.selectedDay);
+    setMonth(defaults.month);
+    setFrom(defaults.from);
+    setTo(defaults.to);
+    setNoWilayah(defaults.noWilayah);
+    load(defaults);
   }
 
-  const pie = useMemo(
-    () => [
-      {
-        name: "OPEN",
-        value: Number(
-          summary?.open || 0
-        ),
-      },
-      {
-        name: "CLOSE",
-        value: Number(
-          summary?.close || 0
-        ),
-      },
-    ],
-    [summary]
+  function applyFilters() {
+    load(currentFilters());
+  }
+
+ const pie = useMemo(() => {
+  const openTotal = Number(summary?.open || 0);
+  const overdue = Number(summary?.overdue || 0);
+  const close = Number(summary?.close || 0);
+
+  const openNormal = Math.max(
+    openTotal - overdue,
+    0
   );
+
+  return [
+    {
+      name: "OPEN",
+      value: openNormal,
+    },
+    {
+      name: "CLOSE",
+      value: close,
+    },
+    {
+      name: "TERLAMBAT",
+      value: overdue,
+    },
+  ];
+}, [summary]);
 
   const sortedGroups = useMemo(() => {
     return [...groups]
@@ -1094,216 +1231,184 @@ export default function Dashboard() {
             <div className="logo">
               <img
                 src="/ggf-estate-pg01.png"
-                alt="GGF Estate PG 01"
+                alt="Sistem Manajemen Informasi Estate PG1"
               />
             </div>
           </Link>
 
-          <div className="brand-text">
+        <div className="brand-text">
 
-            <b>
-              Dashboard Inspeksi K3
-            </b>
+  <b>
+    Dashboard k3
+  </b>
 
-            <span>
-              Estate PG 01
-            </span>
+  <span>
+    Sistem Manajemen Informasi Estate PG1
+  </span>
 
-          </div>
-
+</div>
         </div>
 
-        <nav
-          className="nav"
-          aria-label="Navigasi utama"
+          <nav
+        className={`nav ${showMobileNav ? "mobile-nav-open" : ""}`}
+  aria-label="Navigasi utama"
+>
+
+  <Link
+    href="/inspeksi"
+    className="nav-page"
+  >
+    Form Inspeksi
+  </Link>
+
+  <Link
+    href="/dashboard"
+    className="nav-page active"
+  >
+    Dashboard
+  </Link>
+
+  <Link
+    href="/temuan"
+    className="nav-page"
+  >
+    Data Temuan
+  </Link>
+        <div
+          className="profile-wrapper"
+          ref={profileRef}
         >
-
-          <Link href="/inspeksi">
-            Form Inspeksi
-          </Link>
-
-          <Link
-            href="/dashboard"
-            className="active"
+          <button
+            type="button"
+            className={`profile-button ${
+              profileOpen
+                ? "profile-button-open"
+                : ""
+            }`}
+            onClick={() =>
+              setProfileOpen(
+                (previous) =>
+                  !previous
+              )
+            }
+            aria-label="Buka profil"
+            aria-expanded={profileOpen}
           >
-            Dashboard
-          </Link>
+            <span className="profile-avatar">
+              {initial}
+            </span>
 
-          <Link href="/temuan">
-            Data Temuan
-          </Link>
+            <span className="profile-button-text">
+              <strong>
+                {fullName}
+              </strong>
 
-          <div
-            className="profile-container"
-            ref={profileRef}
-          >
+              <small>
+                {role}
+              </small>
+            </span>
 
-            <button
-              type="button"
-              className={`profile-button ${
-                profileOpen
-                  ? "profile-button-open"
-                  : ""
-              }`}
-              onClick={() =>
-                setProfileOpen(
-                  (previous) =>
-                    !previous
-                )
-              }
-              aria-label="Buka profil"
-              aria-expanded={profileOpen}
-            >
+            <span className="profile-chevron">
+              <ChevronIcon />
+            </span>
+          </button>
 
-              <span className="profile-avatar">
-                {initial}
-              </span>
+          {profileOpen && (
+            <div className="profile-popup">
+              <div className="profile-popup-head">
+                <div className="profile-popup-avatar">
+                  {initial}
+                </div>
 
-              <span className="profile-button-text">
+                <div className="profile-popup-name">
+                  <strong>
+                    {fullName}
+                  </strong>
+
+                  <span>
+                    {role}
+                  </span>
+                </div>
+              </div>
+
+              <div className="profile-divider" />
+
+              <div className="profile-detail">
+                <span>
+                  Nama Lengkap
+                </span>
+
                 <strong>
                   {fullName}
                 </strong>
-
-                <small>
-                  {role}
-                </small>
-              </span>
-
-              <span className="profile-chevron">
-                <ChevronIcon />
-              </span>
-
-            </button>
-
-            {profileOpen && (
-
-              <div
-                className="profile-popup"
-                role="dialog"
-                aria-label="Informasi profil pengguna"
-              >
-
-                <div className="profile-popup-header">
-
-                  <div>
-                    <h3>
-                      Profil Pengguna
-                    </h3>
-
-                    <p>
-                      Informasi akun yang sedang masuk
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="profile-close"
-                    onClick={() =>
-                      setProfileOpen(false)
-                    }
-                    aria-label="Tutup profil"
-                  >
-                    <CloseIcon />
-                  </button>
-
-                </div>
-
-                <div className="profile-popup-body">
-
-                  <div className="profile-large-avatar">
-                    {initial}
-                  </div>
-
-                  <div className="profile-info">
-
-                    <div className="profile-info-item">
-
-                      <span className="profile-info-icon">
-                        <UserIcon />
-                      </span>
-
-                      <div>
-                        <small>
-                          Nama Lengkap
-                        </small>
-
-                        <strong>
-                          {fullName}
-                        </strong>
-                      </div>
-
-                    </div>
-
-                    <div className="profile-info-item">
-
-                      <span className="profile-role-icon">
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M12 3L19 6.5V11.5C19 16.2 16 19.4 12 21C8 19.4 5 16.2 5 11.5V6.5L12 3Z"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinejoin="round"
-                          />
-
-                          <path
-                            d="M9.5 12L11.2 13.7L14.8 10.1"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </span>
-
-                      <div>
-                        <small>
-                          Role
-                        </small>
-
-                        <strong>
-                          {role}
-                        </strong>
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-                <div className="profile-popup-footer">
-
-                  <span className="profile-status-dot" />
-
-                  <span>
-                    Akun sedang aktif
-                  </span>
-
-                </div>
-
               </div>
 
-            )}
+              <div className="profile-detail">
+                <span>
+                  Username
+                </span>
 
-          </div>
+                <strong>
+                  {user?.username || "-"}
+                </strong>
+              </div>
 
-          <button
-            type="button"
-            className="nav-logout"
-            onClick={() => {
-              window.location.href =
-                "/login";
-            }}
-          >
-            Logout
-          </button>
+              <div className="profile-detail">
+                <span>
+                  Role
+                </span>
 
-        </nav>
+                <strong className="role-badge">
+                  {role}
+                </strong>
+              </div>
+
+              <div className="profile-divider" />
+
+              <button
+                type="button"
+                className="popup-logout"
+                onClick={() => {
+                  setProfileOpen(false);
+                  window.location.href = "/login";
+                }}
+              >
+                <span className="logout-icon">
+                  ⇥
+                </span>
+
+                <span>
+                  Logout
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="nav-logout"
+          onClick={() => {
+            window.location.href = "/login";
+          }}
+        >
+          Logout
+        </button>
+      </nav>
+
+      <div className="mobile-menu-wrapper">
+        <button
+          type="button"
+          className={`mobile-menu-button ${showMobileNav ? "mobile-menu-button-open" : ""}`}
+          onClick={() => setShowMobileNav((value) => !value)}
+          aria-label={showMobileNav ? "Tutup menu navigasi" : "Buka menu navigasi"}
+          aria-expanded={showMobileNav}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
 
       </header>
 
@@ -1338,28 +1443,29 @@ export default function Dashboard() {
               Tampilan Periode
             </label>
 
-            <select
-              value={scope}
-              onChange={(e) =>
-                setScope(e.target.value)
-              }
-            >
-              <option value="all">
-                Semua Data
-              </option>
-
-              <option value="day">
-                1 Hari
-              </option>
-
-              <option value="month">
-                Bulanan
-              </option>
-
-              <option value="range">
-                Jangka Waktu
-              </option>
-            </select>
+<CustomDropdown
+  value={scope}
+  onChange={setScope}
+  placeholder="Semua Data"
+  options={[
+    {
+      value: "all",
+      label: "Semua Data",
+    },
+    {
+      value: "day",
+      label: "1 Hari",
+    },
+    {
+      value: "month",
+      label: "Bulanan",
+    },
+    {
+      value: "range",
+      label: "Jangka Waktu",
+    },
+  ]}
+/>
 
           </div>
 
@@ -1372,6 +1478,7 @@ export default function Dashboard() {
 
               <input
                 type="date"
+                lang="id-ID"
                 value={selectedDay}
                 onChange={(e) =>
                   setSelectedDay(
@@ -1392,6 +1499,7 @@ export default function Dashboard() {
 
               <input
                 type="month"
+                  lang="id-ID"
                 value={month}
                 onChange={(e) =>
                   setMonth(
@@ -1414,6 +1522,7 @@ export default function Dashboard() {
 
                 <input
                   type="date"
+                  lang="id-ID"
                   value={from}
                   onChange={(e) =>
                     setFrom(
@@ -1432,6 +1541,7 @@ export default function Dashboard() {
 
                 <input
                   type="date"
+                  lang="id-ID"
                   value={to}
                   onChange={(e) =>
                     setTo(
@@ -1451,47 +1561,41 @@ export default function Dashboard() {
               Wilayah
             </label>
 
-            <select
-              value={noWilayah}
-              onChange={(e) =>
-                setNoWilayah(
-                  e.target.value
-                )
-              }
-            >
+            <CustomDropdown
+  value={noWilayah}
+  onChange={setNoWilayah}
+  placeholder="Semua Wilayah"
+  options={[
+    {
+      value: "",
+      label: "Semua Wilayah",
+    },
 
-              <option value="">
-                Semua Wilayah
-              </option>
+    ...masterWilayah.map(
+      (item, index) => {
+        const value =
+          item?.no_wilayah ??
+          item?.id_wilayah ??
+          item?.id ??
+          "";
 
-              {masterWilayah.map(
-                (item, index) => {
-                  const value =
-                    item?.no_wilayah ??
-                    item?.id_wilayah ??
-                    item?.id ??
-                    "";
+        const label =
+          item?.nama_wilayah ||
+          item?.nama ||
+          item?.label ||
+          (value
+            ? `Wilayah ${value}`
+            : "Wilayah");
 
-                  const label =
-                    item?.nama_wilayah ||
-                    item?.nama ||
-                    item?.label ||
-                    (value
-                      ? `Wilayah ${value}`
-                      : "Wilayah");
-
-                  return (
-                    <option
-                      key={`${value}-${index}`}
-                      value={value}
-                    >
-                      {label}
-                    </option>
-                  );
-                }
-              )}
-
-            </select>
+        return {
+          value,
+          label,
+          key: `${value}-${index}`,
+        };
+      }
+    ),
+  ]}
+/>
 
           </div>
 
@@ -1505,7 +1609,7 @@ export default function Dashboard() {
             <button
               type="button"
               className="k3d-apply-button"
-              onClick={load}
+              onClick={applyFilters}
               disabled={loading}
             >
               {loading
@@ -2001,7 +2105,7 @@ export default function Dashboard() {
 
   </div>
 
-  <div className="k3d-wilayah-summary-list">
+ <div className="k3d-wilayah-summary-list">
 
   {wilayahDisplay
     .filter((item) => {
@@ -2014,7 +2118,6 @@ export default function Dashboard() {
           .trim()
           .toLowerCase() !== "mixer"
       );
-
     })
     .map((item, index) => {
 
@@ -2023,17 +2126,27 @@ export default function Dashboard() {
 
       const totalWilayah =
         Number(
-          item?.jumlah ??
-            item?.total ??
+          item?.total ??
+            item?.jumlah ??
             item?.jumlah_temuan ??
             0
         );
 
-      const warnaTitik =
-        index >= 5
-          ? "orange"
-          : "green";
+      const closeWilayah =
+        Number(
+          item?.close ??
+            item?.jumlah_close ??
+            0
+        );
 
+      const closeRate =
+        totalWilayah > 0
+          ? (closeWilayah /
+              totalWilayah) *
+            100
+          : 0;
+
+     const warnaTitik = "green";
       return (
         <div
           key={`${String(
@@ -2059,7 +2172,7 @@ export default function Dashboard() {
           </div>
 
           <strong>
-            {formatNumber(totalWilayah)}
+            {formatPercent(closeRate)}
           </strong>
 
         </div>
@@ -2093,6 +2206,10 @@ export default function Dashboard() {
 
                 <tr>
 
+                  <th className="k3d-detail-mobile">
+                    Detail
+                  </th>
+
                   <th>
                     Tanggal
                   </th>
@@ -2113,7 +2230,7 @@ export default function Dashboard() {
                     Deadline
                   </th>
 
-                  <th>
+                  <th className="k3d-detail-desktop">
                     Detail
                   </th>
 
@@ -2131,6 +2248,46 @@ export default function Dashboard() {
                         row.id_temuan
                       )}
                     >
+
+                      <td className="k3d-detail-mobile">
+                        <button
+                          type="button"
+                          className="k3d-eye-button"
+                          style={{
+                            color: row?.overdue
+                              ? "#111111"
+                              : String(row?.status_temuan || "").toUpperCase() === "CLOSE"
+                              ? "#176b3a"
+                              : "#f2c300",
+                          }}
+                          onClick={() => setSelectedOpen(row)}
+                          title="Lihat detail temuan"
+                          aria-label="Lihat detail temuan"
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M2.5 12C4.8 7.8 8 5.5 12 5.5C16 5.5 19.2 7.8 21.5 12C19.2 16.2 16 18.5 12 18.5C8 18.5 4.8 16.2 2.5 12Z"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="3"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                            />
+                          </svg>
+                        </button>
+                      </td>
 
                       <td>
                         {String(
@@ -2172,17 +2329,24 @@ export default function Dashboard() {
 
                       </td>
 
-                      <td>
+                      <td className="k3d-detail-desktop">
 
-                        <button
-                          type="button"
-                          className="k3d-eye-button"
-                          onClick={() =>
-                            setSelectedOpen(row)
-                          }
-                          title="Lihat detail temuan"
-                          aria-label="Lihat detail temuan"
-                        >
+                       <button
+  type="button"
+  className="k3d-eye-button"
+  style={{
+    color: row?.overdue
+      ? "#111111"
+      : String(row?.status_temuan || "").toUpperCase() === "CLOSE"
+      ? "#176b3a"
+      : "#f2c300",
+  }}
+  onClick={() =>
+    setSelectedOpen(row)
+  }
+  title="Lihat detail temuan"
+  aria-label="Lihat detail temuan"
+>
 
                           <svg
                             width="18"
@@ -2453,6 +2617,13 @@ export default function Dashboard() {
 
               <div className="k3d-open-detail-footer">
 
+                <Link
+                  href={`/temuan?temuan=${encodeURIComponent(String(selectedOpen.id_temuan))}&action=close`}
+                  className="k3d-open-follow-up-button"
+                >
+                  Tindak Lanjut Temuan
+                </Link>
+
                 <button
                   type="button"
                   onClick={() =>
@@ -2472,6 +2643,26 @@ export default function Dashboard() {
 
       </section>
 
+      <div className="k3d-dashboard-bottom-navigation">
+        <Link
+          href="/inspeksi"
+          className="k3d-dashboard-back-button"
+          aria-label="Kembali ke Form Inspeksi"
+          title="Kembali"
+        >
+          ← Kembali
+        </Link>
+
+        <Link
+          href="/temuan"
+          className="k3d-dashboard-next-button"
+          aria-label="Lanjut ke Data Temuan"
+          title="Data Temuan"
+        >
+          Data Temuan →
+        </Link>
+      </div>
+
       <footer className="k3d-footer">
 
         <span className="k3d-footer-pineapple"></span>
@@ -2483,6 +2674,10 @@ export default function Dashboard() {
       </footer>
 
       <style jsx global>{`
+
+      @import url(
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap'
+);
 
         .k3d-dashboard .topbar {
           position: fixed !important;
@@ -2721,183 +2916,183 @@ export default function Dashboard() {
         }
 
         .k3d-dashboard .profile-popup {
-          position: absolute;
-          top: calc(100% + 10px);
-          right: 0;
-          width: 330px;
-          max-width: calc(100vw - 24px);
-          overflow: hidden;
-          background: rgba(255, 255, 255, 0.99);
-          border: 1px solid #dfe8e2;
-          border-radius: 16px;
-          box-shadow: 0 18px 50px rgba(25, 53, 36, 0.18);
-          z-index: 100000;
-          animation: k3dProfilePopupIn 0.18s ease-out;
-        }
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1100;
 
-        @keyframes k3dProfilePopupIn {
-          from {
-            opacity: 0;
-            transform: translateY(-7px) scale(0.98);
-          }
+  width: 298px;
 
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
+  padding: 16px;
 
-        .k3d-dashboard .profile-popup-header {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 18px 18px 15px;
-          border-bottom: 1px solid #edf1ee;
-          background: linear-gradient(
-            180deg,
-            #f8fcf9 0%,
-            #ffffff 100%
-          );
-        }
+  border: 1px solid #dfe6e1;
+  border-radius: 17px;
 
-        .k3d-dashboard .profile-popup-header h3 {
-          margin: 0;
-          color: #142119;
-          font-size: 15px;
-          line-height: 1.25;
-          font-weight: 800;
-        }
+  background: #ffffff;
 
-        .k3d-dashboard .profile-popup-header p {
-          margin: 4px 0 0;
-          color: #7a867e;
-          font-size: 10px;
-          line-height: 1.4;
-        }
+  box-shadow:
+    0 18px 40px rgba(24, 45, 32, 0.13);
 
-        .k3d-dashboard .profile-close {
-          width: 30px;
-          height: 30px;
-          min-width: 30px;
-          border: 1px solid #e2e8e3;
-          border-radius: 9px;
-          background: #ffffff;
-          color: #68756d;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.18s ease;
-        }
+  animation: k3dProfilePopupIn 0.14s ease-out;
+}
 
-        .k3d-dashboard .profile-close:hover {
-          color: #a12d2d;
-          background: #fff4f4;
-          border-color: #efcccc;
-          transform: rotate(3deg);
-        }
+@keyframes k3dProfilePopupIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 
-        .k3d-dashboard .profile-popup-body {
-          padding: 20px 18px;
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-        .k3d-dashboard .profile-large-avatar {
-          width: 66px;
-          height: 66px;
-          min-width: 66px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #18843c, #079447);
-          color: #ffffff;
-          font-size: 21px;
-          font-weight: 800;
-          box-shadow: 0 8px 20px rgba(8, 120, 61, 0.20);
-          border: 4px solid #eef8f1;
-        }
+.k3d-dashboard .profile-popup-head {
+  display: flex;
+  align-items: center;
 
-        .k3d-dashboard .profile-info {
-          flex: 1;
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
+  gap: 12px;
 
-        .k3d-dashboard .profile-info-item {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          min-width: 0;
-        }
+  padding: 1px 0 3px;
+}
 
-        .k3d-dashboard .profile-info-item > div {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          min-width: 0;
-        }
+.k3d-dashboard .profile-popup-avatar {
+  width: 43px;
+  height: 43px;
 
-        .k3d-dashboard .profile-info-item small {
-          color: #8a958e;
-          font-size: 9px;
-          line-height: 1.2;
-          font-weight: 600;
-        }
+  flex: 0 0 43px;
 
-        .k3d-dashboard .profile-info-item strong {
-          color: #17231c;
-          font-size: 12px;
-          line-height: 1.3;
-          font-weight: 800;
-          overflow-wrap: anywhere;
-        }
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-        .k3d-dashboard .profile-info-icon,
-        .k3d-dashboard .profile-role-icon {
-          width: 32px;
-          height: 32px;
-          min-width: 32px;
-          border-radius: 9px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
+  border-radius: 50%;
 
-        .k3d-dashboard .profile-info-icon {
-          color: #08783d;
-          background: #edf7f0;
-        }
+  background: #079447;
+  color: #ffffff;
 
-        .k3d-dashboard .profile-role-icon {
-          color: #54715f;
-          background: #f0f4f1;
-        }
+  font-family: "Poppins", sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+}
 
-        .k3d-dashboard .profile-popup-footer {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          padding: 11px 18px;
-          background: #f8faf8;
-          border-top: 1px solid #edf1ee;
-          color: #758078;
-          font-size: 9px;
-          font-weight: 600;
-        }
+.k3d-dashboard .profile-popup-name {
+  display: flex;
+  flex-direction: column;
 
-        .k3d-dashboard .profile-status-dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: #20a052;
-          box-shadow: 0 0 0 3px rgba(32, 160, 82, 0.10);
-        }
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.k3d-dashboard .profile-popup-name strong {
+  color: #26382d;
+
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.k3d-dashboard .profile-popup-name span {
+  color: #7b8980;
+
+  font-family: "Poppins", sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.k3d-dashboard .profile-divider {
+  width: 100%;
+  height: 1px;
+
+  margin: 11px 0;
+
+  background: #e7ece8;
+}
+
+.k3d-dashboard .profile-detail {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  margin-bottom: 11px;
+}
+
+.k3d-dashboard .profile-detail:last-of-type {
+  margin-bottom: 0;
+}
+
+.k3d-dashboard .profile-detail > span {
+  color: #89948d;
+
+  font-family: "Poppins", sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.k3d-dashboard .profile-detail > strong {
+  color: #26382d;
+
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.k3d-dashboard .role-badge {
+  width: fit-content;
+
+  padding: 4px 8px;
+
+  border-radius: 6px;
+
+  background: #e7f6eb;
+  color: #08783d;
+
+  font-family: "Poppins", sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.k3d-dashboard .popup-logout {
+  width: 100%;
+  min-height: 39px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  border: 1px solid #f0d2d2;
+  border-radius: 10px;
+
+  background: #fff8f8;
+  color: #b42e2e;
+
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.k3d-dashboard .popup-logout:hover {
+  background: #fff0f0;
+  border-color: #ebc2c2;
+}
+
+.k3d-dashboard .popup-logout:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.k3d-dashboard .logout-icon {
+  font-size: 14px;
+}
 
         .k3d-dashboard {
           padding-top: 74px !important;
@@ -3049,13 +3244,13 @@ export default function Dashboard() {
           }
 
           .k3d-dashboard .logo {
-            width: 92px !important;
-            height: 43px !important;
-            flex-basis: 92px !important;
+            width: 82px !important;
+            height: 40px !important;
+            flex-basis: 82px !important;
           }
 
           .k3d-dashboard .logo img {
-            max-width: 92px !important;
+            max-width: 82px !important;
           }
 
           .k3d-dashboard .brand-text {
@@ -3137,6 +3332,20 @@ export default function Dashboard() {
             min-height: 40px;
             padding: 6px 10px;
             font-size: 10px;
+          }
+
+          .k3d-dashboard .k3d-filter-actions {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            grid-column: 1 / -1;
+          }
+
+          .k3d-dashboard .k3d-apply-button {
+            width: auto;
+            flex: 1 1 auto;
           }
 
         }
@@ -3458,6 +3667,7 @@ export default function Dashboard() {
 
         .k3d-open-detail-footer {
           display: flex;
+          gap: 8px;
           justify-content: flex-end;
           padding: 12px 22px;
           border-top: 1px solid #edf1ee;
@@ -3478,6 +3688,19 @@ export default function Dashboard() {
 
         .k3d-open-detail-footer button:hover {
           background: #12562f;
+        }
+
+        .k3d-open-follow-up-button {
+          display: inline-flex;
+          align-items: center;
+          padding: 9px 15px;
+          border: 1px solid #176b3a;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #176b3a;
+          font-size: 12px;
+          font-weight: 800;
+          text-decoration: none;
         }
 
         @media (max-width: 600px) {
@@ -3549,7 +3772,7 @@ export default function Dashboard() {
 
 .k3d-wilayah-chart-wrapper {
   width: 100%;
-  min-height: 390px;
+  min-height: 440px;
   margin-top: 4px;
   border: none !important;
   outline: none !important;
@@ -3615,7 +3838,7 @@ export default function Dashboard() {
 .k3d-wilayah-summary-item strong {
   padding-left: 18px;
   color: #16723d;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1;
 }
@@ -3688,6 +3911,750 @@ export default function Dashboard() {
   }
 
 }
+  /* =====================================================
+   NAVBAR DESKTOP
+   MENYAMAKAN DENGAN NAVBAR FORM INSPEKSI
+   MOBILE TIDAK DIUBAH
+===================================================== */
+
+@media (min-width: 901px) {
+
+}
+  .k3d-dashboard .topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 99999 !important;
+
+    min-height: 78px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 20px !important;
+    padding: 10px clamp(18px, 4vw, 54px) !important;
+
+    background: rgba(255,255,255,.96) !important;
+    border-bottom: 1px solid #e3eae5 !important;
+
+    box-shadow: none !important;
+
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+
+    transform: none !important;
+    isolation: auto !important;
+  }
+
+  .k3d-dashboard .brand {
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 12px !important;
+
+    min-width: 0 !important;
+    flex: 0 1 auto !important;
+  }
+
+  .k3d-dashboard .brand-logo-link {
+    display: flex !important;
+    align-items: center !important;
+
+    text-decoration: none !important;
+    flex-shrink: 0 !important;
+  }
+
+  .k3d-dashboard .logo {
+    width: 110px !important;
+    height: 52px !important;
+
+    flex: 0 0 110px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    overflow: hidden !important;
+    background: transparent !important;
+  }
+
+  .k3d-dashboard .logo img {
+    display: block !important;
+
+    width: 100% !important;
+    max-width: 110px !important;
+    height: auto !important;
+
+    object-fit: contain !important;
+  }
+
+  .k3d-dashboard .brand-text {
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 2px !important;
+
+    min-width: 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  .k3d-dashboard .brand-text b {
+    color: #0d2618 !important;
+
+    font-size: 15px !important;
+    font-weight: 800 !important;
+
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+  }
+
+  .k3d-dashboard .brand-text span {
+    color: #87928b !important;
+
+    font-size: 11px !important;
+    font-weight: 600 !important;
+
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+  }
+
+  .k3d-dashboard .nav {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+
+    gap: 7px !important;
+
+    flex: 0 0 auto !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-weight: 600 !important;
+  }
+
+  .k3d-dashboard .nav-page {
+    position: relative !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    min-height: 42px !important;
+
+    border: 0 !important;
+    border-radius: 10px !important;
+
+    padding: 10px 13px !important;
+
+    background: transparent !important;
+    color: #5f6c64 !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+
+    text-decoration: none !important;
+    white-space: nowrap !important;
+
+    transition:
+      background .16s ease,
+      color .16s ease,
+      transform .16s ease !important;
+  }
+
+  .k3d-dashboard .nav-page:hover {
+    background: #f1f6f2 !important;
+    color: #123d25 !important;
+  }
+
+  .k3d-dashboard .nav-page.active {
+    min-width: 112px !important;
+
+    color: #08783d !important;
+    background: #edf8f1 !important;
+
+    border-bottom: 2px solid #079447 !important;
+    border-radius: 10px !important;
+  }
+
+  .k3d-dashboard .nav-page.active::after {
+    display: none !important;
+  }
+
+  .k3d-dashboard .profile-wrapper {
+    position: relative !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    flex: 0 0 auto !important;
+  }
+
+  .k3d-dashboard .profile-button {
+    min-width: 145px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 9px !important;
+
+    padding: 4px 10px 4px 7px !important;
+
+    border: 1px solid #dbe5de !important;
+    border-radius: 12px !important;
+
+    background: #ffffff !important;
+    color: #0d2618 !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-weight: 600 !important;
+
+    text-align: left !important;
+
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .k3d-dashboard .profile-button:hover,
+  .k3d-dashboard .profile-button-open {
+    background: #f8fbf9 !important;
+    border-color: #cbdacf !important;
+
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .k3d-dashboard .profile-avatar {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border-radius: 50% !important;
+
+    background: #079447 !important;
+    color: #ffffff !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+
+    box-shadow: none !important;
+  }
+
+  .k3d-dashboard .profile-button-text {
+    min-width: 0 !important;
+
+    flex: 1 1 auto !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+
+    gap: 0 !important;
+
+    overflow: hidden !important;
+  }
+
+  .k3d-dashboard .profile-button-text strong {
+    overflow: hidden !important;
+
+    color: #25362c !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+
+    line-height: 1.05 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .k3d-dashboard .profile-button-text small {
+    margin-top: 4px !important;
+
+    color: #7c8981 !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 8px !important;
+    font-weight: 600 !important;
+
+    line-height: 1.05 !important;
+  }
+
+  .k3d-dashboard .profile-chevron {
+    margin-left: 2px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    color: #7c8981 !important;
+
+    font-size: 8px !important;
+    line-height: 1 !important;
+
+    transform: translateY(-1px) !important;
+  }
+
+  .k3d-dashboard .nav-logout {
+    min-height: 42px !important;
+
+    border: 1px solid #d9e3dc !important;
+    border-radius: 10px !important;
+
+    padding: 10px 15px !important;
+
+    background: #ffffff !important;
+    color: #304037 !important;
+
+    font-family: "Poppins", sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+
+    box-shadow: none !important;
+  }
+
+  .k3d-dashboard .nav-logout:hover {
+    background: #f7faf8 !important;
+    color: #123d25 !important;
+
+    border-color: #cbd8cf !important;
+
+    transform: none !important;
+  }
+
+  .k3d-dashboard {
+    padding-top: 78px !important;
+  }
+
+}
+
+/* =====================================================
+   CUSTOM DROPDOWN FILTER
+===================================================== */
+
+/* =====================================================
+   TAMPILAN DROPDOWN - HANYA STYLE
+===================================================== */
+
+.k3d-dashboard .k3d-dropdown {
+  position: relative;
+  width: 124px;
+  min-width: 124px;
+}
+
+.k3d-dashboard .k3d-dropdown-button {
+  width: 100% !important;
+  height: 42px !important;
+
+  padding: 0 34px 0 13px !important;
+
+  border: 1px solid #d9e4dc !important;
+  border-radius: 11px !important;
+
+  background: #ffffff !important;
+  color: #26352c !important;
+
+  font-family: "Poppins", sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+
+  outline: none !important;
+  box-sizing: border-box !important;
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease !important;
+}
+
+.k3d-dashboard .k3d-dropdown-button:hover {
+  border-color: #a9c9b2 !important;
+  background: #fbfdfb !important;
+}
+
+.k3d-dashboard .k3d-dropdown-button:focus {
+  border-color: #079447 !important;
+  box-shadow: 0 0 0 3px rgba(7, 148, 71, 0.08) !important;
+}
+
+.k3d-dashboard .k3d-dropdown-arrow {
+  color: #68756d !important;
+}
+
+.k3d-dashboard .k3d-dropdown-button option {
+  background: #ffffff;
+  color: #26352c;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 10px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 760px) {
+  .k3d-dashboard .k3d-dropdown {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .k3d-dashboard .k3d-dropdown-button {
+    height: 42px !important;
+  }
+}
+
+
+/* =====================================================
+   MENU DROPDOWN
+===================================================== */
+
+.k3d-dashboard .k3d-dropdown-menu {
+  position: absolute !important;
+
+  top: calc(100% + 7px) !important;
+  left: 0 !important;
+
+  width: 100% !important;
+  min-width: 180px !important;
+
+  max-height: 270px !important;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  padding: 5px !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #dfe7e1 !important;
+  border-radius: 11px !important;
+
+  box-shadow:
+    0 16px 35px rgba(28, 53, 37, 0.14),
+    0 4px 10px rgba(28, 53, 37, 0.06) !important;
+
+  box-sizing: border-box !important;
+
+  z-index: 999999 !important;
+
+  animation: k3dDropdownAppear 0.16s ease-out !important;
+}
+
+@keyframes k3dDropdownAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* =====================================================
+   SETIAP PILIHAN
+===================================================== */
+
+.k3d-dashboard .k3d-dropdown-item {
+  width: 100% !important;
+  min-height: 37px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 7px !important;
+
+  padding: 8px 9px !important;
+
+  border: none !important;
+  border-radius: 7px !important;
+
+  background: transparent !important;
+  color: #34453a !important;
+
+  font-family: "Poppins", sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+
+  text-align: left !important;
+
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+
+  transition:
+    background 0.14s ease,
+    color 0.14s ease !important;
+}
+
+.k3d-dashboard .k3d-dropdown-item:hover {
+  background: #eef8f1 !important;
+  color: #08783d !important;
+}
+
+.k3d-dashboard .k3d-dropdown-item-active {
+  background: #e9f6ed !important;
+  color: #08783d !important;
+  font-weight: 700 !important;
+}
+
+.k3d-dashboard .k3d-dropdown-item-active:hover {
+  background: #e1f2e6 !important;
+}
+
+
+/* =====================================================
+   CENTANG
+===================================================== */
+
+.k3d-dashboard .k3d-dropdown-check {
+  width: 17px !important;
+  min-width: 17px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  color: #08783d !important;
+
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+.k3d-dashboard .k3d-dropdown-label {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+
+/* =====================================================
+   SCROLLBAR
+===================================================== */
+
+.k3d-dashboard .k3d-dropdown-menu::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+.k3d-dashboard .k3d-dropdown-menu::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.k3d-dashboard .k3d-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #cbd8cf !important;
+  border-radius: 10px !important;
+}
+
+.k3d-dashboard .k3d-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #aebeb4 !important;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 760px) {
+  .k3d-dashboard .k3d-dropdown {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .k3d-dashboard .k3d-dropdown-menu {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: 240px !important;
+  }
+
+  .k3d-dashboard .k3d-dropdown-button {
+    height: 42px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .k3d-dashboard .k3d-dropdown {
+    width: 100% !important;
+  }
+
+  .k3d-dashboard .k3d-dropdown-button {
+    height: 40px !important;
+    font-size: 10px !important;
+  }
+
+  .k3d-dashboard .k3d-dropdown-item {
+    min-height: 36px !important;
+    font-size: 10px !important;
+  }
+}
+
+.k3d-dashboard .k3d-dropdown-button {
+  color: #26352c !important;
+  background: #ffffff !important;
+  border-color: #d9e4dc !important;
+  accent-color: #079447 !important;
+}
+
+.k3d-dashboard .k3d-dropdown-button:focus {
+  border-color: #079447 !important;
+  box-shadow: 0 0 0 3px rgba(7, 148, 71, 0.08) !important;
+  outline: none !important;
+}
+
+.k3d-dashboard .k3d-dropdown-button option {
+  color: #26352c !important;
+  background: #ffffff !important;
+}
+
+.k3d-dashboard .k3d-dropdown-button option:checked {
+  color: #08783d !important;
+  background: #e9f6ed !important;
+}
+        .mobile-menu-wrapper,
+        .mobile-menu-button {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .k3d-dashboard .brand-text {
+            display: flex !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            flex-direction: column !important;
+            gap: 2px !important;
+          }
+
+          .k3d-dashboard .brand-text b {
+            font-size: 12px !important;
+            line-height: 1.15 !important;
+            white-space: nowrap !important;
+          }
+
+          .k3d-dashboard .brand-text span {
+            font-size: 8px !important;
+            line-height: 1.15 !important;
+            white-space: normal !important;
+          }
+
+          .k3d-dashboard .nav {
+            position: fixed !important;
+            top: 66px !important;
+            left: 10px !important;
+            right: 10px !important;
+            display: none !important;
+            flex-direction: column !important;
+            width: auto !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            align-items: stretch !important;
+            gap: 5px !important;
+            padding: 10px !important;
+            background: #ffffff !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 30px rgba(24, 45, 32, 0.14) !important;
+            overflow: visible !important;
+            z-index: 1200 !important;
+          }
+
+          .k3d-dashboard .nav.mobile-nav-open {
+            display: flex !important;
+          }
+
+          .k3d-dashboard .nav a {
+            width: 100% !important;
+            min-height: 42px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 10px 12px !important;
+            border-radius: 9px !important;
+          }
+
+          .k3d-dashboard .nav .profile-wrapper {
+            display: flex !important;
+            width: 100% !important;
+          }
+
+          .k3d-dashboard .nav .profile-button {
+            width: 100% !important;
+            min-width: 0 !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            justify-content: flex-start !important;
+            padding: 6px 12px !important;
+            border-radius: 9px !important;
+          }
+
+          .k3d-dashboard .nav .profile-button-text {
+            display: flex !important;
+          }
+
+          .k3d-dashboard .nav .profile-popup {
+            position: fixed !important;
+            top: 61px !important;
+            right: 10px !important;
+            width: min(298px, calc(100vw - 20px)) !important;
+          }
+
+          .k3d-dashboard .nav .nav-logout {
+            display: none !important;
+          }
+
+          .k3d-dashboard .mobile-menu-wrapper {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex: 0 0 auto !important;
+          }
+
+          .k3d-dashboard .mobile-menu-button {
+            width: 42px !important;
+            height: 42px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            padding: 0 !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 10px !important;
+            background: #ffffff !important;
+          }
+
+          .k3d-dashboard .mobile-menu-button span {
+            display: block !important;
+            width: 20px !important;
+            height: 2px !important;
+            background: #087f3f !important;
+            border-radius: 999px !important;
+          }
+
+          .k3d-dashboard .mobile-menu-button-open span:nth-child(1) {
+            transform: translateY(7px) rotate(45deg) !important;
+          }
+
+          .k3d-dashboard .mobile-menu-button-open span:nth-child(2) {
+            opacity: 0 !important;
+          }
+
+          .k3d-dashboard .mobile-menu-button-open span:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg) !important;
+          }
+        }
       `}</style>
 
     </main>

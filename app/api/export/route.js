@@ -17,6 +17,7 @@ export async function GET(req) {
     const noWilayah = noWilayahRaw
       ? Number(noWilayahRaw)
       : null;
+    const idsRaw = searchParams.get("ids");
 
     const format = (
       searchParams.get("format") || "xlsx"
@@ -27,21 +28,19 @@ export async function GET(req) {
     // =========================================================
 
     if (
-      !from ||
-      !to ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(from) ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(to)
+      (from && !/^\d{4}-\d{2}-\d{2}$/.test(from)) ||
+      (to && !/^\d{4}-\d{2}-\d{2}$/.test(to))
     ) {
       return Response.json(
         {
           error:
-            "from dan to wajib berupa tanggal YYYY-MM-DD",
+            "from dan to harus berupa tanggal YYYY-MM-DD",
         },
         { status: 400 }
       );
     }
 
-    if (from > to) {
+    if (from && to && from > to) {
       return Response.json(
         {
           error:
@@ -82,15 +81,44 @@ export async function GET(req) {
     // berupa string, sedangkan tanggal_temuan adalah DATE.
     // =========================================================
 
-    const clauses = [
-      `t.tanggal_temuan >= $1::date`,
-      `t.tanggal_temuan <= $2::date`,
-    ];
+    const clauses = [];
+    const params = [];
 
-    const params = [
-      from,
-      to,
-    ];
+    if (idsRaw !== null) {
+      const ids = idsRaw
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => /^\d+$/.test(value));
+
+      if (ids.length !== new Set(ids).size) {
+        return Response.json(
+          { error: "Daftar ID temuan tidak valid" },
+          { status: 400 }
+        );
+      }
+
+      if (!ids.length) {
+        clauses.push("1 = 0");
+      } else {
+        const placeholders = ids.map((id) => {
+          params.push(id);
+          return `$${params.length}::bigint`;
+        });
+        clauses.push(
+          `t.id_temuan IN (${placeholders.join(", ")})`
+        );
+      }
+    }
+
+    if (from) {
+      params.push(from);
+      clauses.push(`t.tanggal_temuan >= $${params.length}::date`);
+    }
+
+    if (to) {
+      params.push(to);
+      clauses.push(`t.tanggal_temuan <= $${params.length}::date`);
+    }
 
     if (status) {
       params.push(status);
@@ -166,7 +194,7 @@ export async function GET(req) {
       LEFT JOIN public.master_grup_temuan mg
         ON mg.id_grup = t.id_grup
 
-      WHERE ${clauses.join(" AND ")}
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
 
       ORDER BY
         t.tanggal_temuan,

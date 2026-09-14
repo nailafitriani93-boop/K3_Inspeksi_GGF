@@ -11,19 +11,34 @@ export default function SearchSelect({
   labelKey,
   placeholder = "Cari Wilayah...",
   disabled = false,
+  multiple = false,
 }) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
 
-  const selectedItem = options.find(
-    (item) => String(item[valueKey]) === String(value)
+  const selectedValues = multiple
+    ? (Array.isArray(value) ? value : [])
+    : [value];
+
+  const selectedItems = options.filter((item) =>
+    selectedValues.some(
+      (selectedValue) =>
+        String(item[valueKey]) === String(selectedValue)
+    )
   );
 
-  const selectedLabel = selectedItem
-    ? selectedItem[labelKey]
-    : "";
+  const selectedLabel = selectedItems
+    .map((item) => item[labelKey])
+    .join(", ");
+
+  const hasSelection = selectedValues.some(
+    (selectedValue) =>
+      selectedValue !== null &&
+      selectedValue !== undefined &&
+      String(selectedValue).trim() !== ""
+  );
 
   const filteredOptions = options.filter((item) => {
     const text = String(
@@ -71,7 +86,27 @@ export default function SearchSelect({
   }
 
   function handleSelect(item) {
-    onChange(String(item[valueKey]));
+    const itemValue = String(item[valueKey]);
+
+    if (multiple) {
+      const alreadySelected = selectedValues.some(
+        (selectedValue) => String(selectedValue) === itemValue
+      );
+
+      onChange(
+        alreadySelected
+          ? selectedValues.filter(
+              (selectedValue) => String(selectedValue) !== itemValue
+            )
+          : [...selectedValues, itemValue]
+      );
+
+      setKeyword("");
+      setOpen(true);
+      return;
+    }
+
+    onChange(itemValue);
 
     setKeyword("");
     setOpen(false);
@@ -80,7 +115,7 @@ export default function SearchSelect({
   function handleClear(e) {
     e.stopPropagation();
 
-    onChange("");
+    onChange(multiple ? [] : "");
 
     setKeyword("");
     setOpen(false);
@@ -127,7 +162,7 @@ export default function SearchSelect({
           autoComplete="off"
         />
 
-        {value && !disabled ? (
+        {hasSelection && !disabled ? (
           <button
             type="button"
             className="search-select-clear"
@@ -150,9 +185,10 @@ export default function SearchSelect({
           {filteredOptions.length > 0 ? (
             <div className="search-select-list">
               {filteredOptions.map((item) => {
-                const isSelected =
-                  String(item[valueKey]) ===
-                  String(value);
+                const isSelected = selectedValues.some(
+                  (selectedValue) =>
+                    String(item[valueKey]) === String(selectedValue)
+                );
 
                 return (
                   <button
@@ -167,6 +203,11 @@ export default function SearchSelect({
                       handleSelect(item)
                     }
                   >
+                    {multiple && (
+                      <span className="search-select-check">
+                        {isSelected ? "✓" : ""}
+                      </span>
+                    )}
                     {item[labelKey]}
                   </button>
                 );
@@ -389,6 +430,14 @@ export default function SearchSelect({
           transition:
             background 0.14s ease,
             color 0.14s ease;
+        }
+
+        .search-select-check {
+          display: inline-flex;
+          width: 18px;
+          margin-right: 6px;
+          color: #16833d;
+          font-weight: 800;
         }
 
         .search-select-option:hover {

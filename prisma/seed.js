@@ -120,12 +120,12 @@ async function main() {
   const users = [
     ...KABAG.map((nama_lengkap) => ({
       nama_lengkap,
-      role: "KABAG"
+      role: "ADMIN"
     })),
 
     ...KASIE.map((nama_lengkap) => ({
       nama_lengkap,
-      role: "KASIE"
+      role: "INSPECTOR"
     }))
   ];
 

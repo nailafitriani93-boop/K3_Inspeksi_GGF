@@ -15,6 +15,8 @@ export async function GET(req) {
       searchParams.get(
         "to"
       ) || "";
+    const noWilayahRaw = searchParams.get("noWilayah") || "";
+    const noWilayah = Number(noWilayahRaw);
 
     /*
       ==========================================================
@@ -67,6 +69,17 @@ export async function GET(req) {
     if (to) {
       dateCondition +=
         ` AND t.tanggal_temuan <= '${to}'`;
+    }
+
+    if (noWilayahRaw && Number.isInteger(noWilayah) && noWilayah >= 1) {
+      dateCondition += ` AND (
+        t.no_wilayah = ${noWilayah}
+        OR t.id_wilayah = (
+          SELECT id_wilayah
+          FROM public.master_wilayah
+          WHERE no_wilayah = ${noWilayah}
+        )
+      )`;
     }
 
     /*
@@ -140,9 +153,10 @@ export async function GET(req) {
 
         LEFT JOIN
           public.temuan_k3 t
-          ON
-            t.no_wilayah =
-              w.no_wilayah
+          ON (
+            t.no_wilayah = w.no_wilayah
+            OR t.id_wilayah = w.id_wilayah
+          )
           ${dateCondition}
 
         GROUP BY

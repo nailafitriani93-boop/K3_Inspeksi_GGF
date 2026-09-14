@@ -314,7 +314,11 @@ export async function GET(req) {
       );
 
       conditions.push(
-        `t.no_wilayah = $${values.length}`
+        `(t.no_wilayah = $${values.length} OR t.id_wilayah = (
+          SELECT id_wilayah
+          FROM public.master_wilayah
+          WHERE no_wilayah = $${values.length}
+        ))`
       );
     }
 

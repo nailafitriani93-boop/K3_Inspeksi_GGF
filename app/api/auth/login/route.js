@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { createSession } from "@/lib/auth";
 
 export async function GET() {
   return NextResponse.json({
@@ -43,6 +44,7 @@ export async function POST(request) {
           status: 400
         }
       );
+
     }
 
     /*
@@ -122,8 +124,12 @@ export async function POST(request) {
     ).toUpperCase();
 
     if (
-      role !== "KABAG" &&
-      role !== "KASIE"
+      ![
+        "ADMIN",
+        "INSPECTOR",
+        "ADMIN_INSPECTOR",
+        "ADMIN_DEVELOPER",
+      ].includes(role)
     ) {
       return NextResponse.json(
         {
@@ -170,7 +176,9 @@ export async function POST(request) {
       id_user: user.id_user,
       username: user.username,
       nama_lengkap: user.nama_lengkap,
-      role
+      email: user.email || "",
+      role,
+      akses_dashboard: Boolean(user.akses_dashboard),
     };
 
     /*
@@ -179,16 +187,32 @@ export async function POST(request) {
     =========================================
     */
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: true,
         message: "Login berhasil.",
         user: userData
       },
-      {
-        status: 200
-      }
+      { status: 200 }
     );
+
+    const token = await createSession({
+      id: user.id_user,
+      username: user.username,
+      nama: user.nama_lengkap,
+      role,
+      akses_dashboard: Boolean(user.akses_dashboard),
+    });
+
+    response.cookies.set("k3_token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 8,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error(
       "================================="

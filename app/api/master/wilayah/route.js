@@ -12,22 +12,14 @@ export async function GET() {
     const rows = await prisma.$queryRaw`
       SELECT
         id_wilayah,
+        no_wilayah,
         nama_wilayah
       FROM public.master_wilayah
       ORDER BY id_wilayah
     `;
 
     const hasil = [];
-
-    /*
-     * Menyimpan wilayah angka 1-7 agar tidak duplikat.
-     */
-    const wilayahAngka = new Map();
-
-    /*
-     * Menyimpan wilayah khusus agar tidak duplikat.
-     */
-    const wilayahKhusus = new Map();
+    const wilayahTerdaftar = new Set();
 
     for (const row of rows) {
       const idWilayah = Number(row.id_wilayah);
@@ -50,142 +42,42 @@ export async function GET() {
         continue;
       }
 
-      /*
-       * =====================================================
-       * WILAYAH 1 - 7
-       * =====================================================
-       *
-       * Ambil angka dari nama wilayah.
-       *
-       * Contoh:
-       * "Wilayah 1"  -> 1
-       * "wilayah01"  -> 1
-       * "WIL - 2"    -> 2
-       * "3"          -> 3
-       */
-      const angkaMatch =
-        namaAsli.match(/\d+/);
+      const normal = namaAsli
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
 
-      if (angkaMatch) {
-        const no = Number(
-          angkaMatch[0]
-        );
+      let label = namaAsli;
+      let noWilayah = row.no_wilayah ?? namaAsli;
 
-        if (
-          Number.isInteger(no) &&
-          no >= 1 &&
-          no <= 7
-        ) {
-          if (!wilayahAngka.has(no)) {
-            wilayahAngka.set(no, {
-              no_wilayah: String(no),
-              nama_wilayah: `Wilayah ${no}`,
-              id_wilayah: idWilayah,
-            });
-          }
-
-          continue;
-        }
-      }
-
-      /*
-       * =====================================================
-       * WILAYAH KHUSUS
-       * =====================================================
-       *
-       * Mendukung variasi penulisan:
-       *
-       * Bengkel
-       * bengkel
-       *
-       * Mixing
-       * mixing
-       * Mixer
-       * mixer
-       *
-       * Dipping
-       * dipping
-       * Diping
-       * diping
-       */
-      const normal =
-        namaAsli
-          .toLowerCase()
-          .replace(/[^a-z]/g, "");
-
-      let key = "";
-      let label = "";
-
-      if (
-        normal.includes("bengkel")
-      ) {
-        key = "bengkel";
+      if (normal.includes("bengkel")) {
         label = "Bengkel";
-      } else if (
-        normal.includes("mixing") ||
-        normal.includes("mixer")
-      ) {
-        key = "mixing";
+      } else if (normal.includes("mixing") || normal.includes("mixer")) {
         label = "Mixing";
-      } else if (
-        normal.includes("dipping") ||
-        normal.includes("diping")
-      ) {
-        key = "dipping";
+      } else if (normal.includes("dipping") || normal.includes("diping")) {
         label = "Dipping";
-      }
-
-      if (key) {
-        if (!wilayahKhusus.has(key)) {
-          wilayahKhusus.set(key, {
-            no_wilayah: key,
-            nama_wilayah: label,
-            id_wilayah: idWilayah,
-          });
+      } else if (normal.includes("office")) {
+        label = "Office";
+      } else if (row.no_wilayah !== null && row.no_wilayah !== undefined) {
+        const angkaMatch = namaAsli.match(/\d+/);
+        if (angkaMatch) {
+          label = `Wilayah ${Number(row.no_wilayah)}`;
         }
       }
-    }
 
-    /*
-     * =====================================================
-     * HASIL AKHIR
-     * =====================================================
-     *
-     * Urutan:
-     *
-     * Wilayah 1
-     * Wilayah 2
-     * ...
-     * Wilayah 7
-     * Bengkel
-     * Mixing
-     * Dipping
-     */
+      // Dashboard memakai nomor wilayah sebagai nilai filter.
+      noWilayah = String(row.no_wilayah ?? noWilayah);
 
-    for (let no = 1; no <= 7; no++) {
-      if (wilayahAngka.has(no)) {
-        hasil.push(
-          wilayahAngka.get(no)
-        );
-      }
-    }
+      const key = String(noWilayah).toLowerCase();
+      if (wilayahTerdaftar.has(key)) continue;
 
-    if (wilayahKhusus.has("bengkel")) {
-      hasil.push(
-        wilayahKhusus.get("bengkel")
-      );
-    }
+      wilayahTerdaftar.add(key);
+      hasil.push({
+        no_wilayah: String(noWilayah),
+        nama_wilayah: label,
+        id_wilayah: idWilayah,
+      });
 
-    if (wilayahKhusus.has("mixing")) {
-      hasil.push(
-        wilayahKhusus.get("mixing")
-      );
-    }
-
-    if (wilayahKhusus.has("dipping")) {
-      hasil.push(
-        wilayahKhusus.get("dipping")
-      );
+      continue;
     }
 
     return Response.json(hasil);

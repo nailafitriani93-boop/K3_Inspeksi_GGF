@@ -250,6 +250,17 @@ export async function POST(request) {
     const fotoCloseUrl =
       `/uploads/temuan-close/${fileName}`;
 
+    await prisma.$executeRaw`
+      UPDATE public.temuan_k3
+      SET task_quiz = jsonb_set(
+        COALESCE(task_quiz, '{}'::jsonb),
+        '{keterangan_close}',
+        to_jsonb(${keterangan}::text),
+        true
+      )
+      WHERE id_temuan = ${BigInt(String(idTemuan))}
+    `;
+
     const updated =
       await prisma.temuan_k3.update({
         where: {

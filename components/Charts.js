@@ -126,15 +126,19 @@ export function StatusPie({ data = [] }) {
     "#4b5358",
   ];
 
-  const chartData = safeData.length
-    ? safeData
-    : [
-        {
-          name: "Tidak Ada Data",
-          value: 1,
-        },
-      ];
-
+ const chartData = safeData.length
+  ? safeData.map((item) => ({
+      ...item,
+      chartTotal: total,
+    }))
+  : [
+      {
+        name: "Tidak Ada Data",
+        value: 1,
+        chartTotal: 1,
+      },
+    ];
+    
   return (
     <div
       className="pie-chart-wrapper"
@@ -182,12 +186,15 @@ export function StatusPie({ data = [] }) {
           </Pie>
 
           <Tooltip
-            formatter={(value) =>
-              toNumber(value).toLocaleString(
-                "id-ID"
-              )
-            }
-          />
+  content={<StatusTooltip />}
+  cursor={false}
+  wrapperStyle={{
+    outline: "none",
+    zIndex: 20,
+    maxWidth:
+      "calc(100vw - 20px)",
+  }}
+/>
         </PieChart>
       </ResponsiveContainer>
 
@@ -212,6 +219,138 @@ export function StatusPie({ data = [] }) {
         </strong>
 
         <span>Total</span>
+      </div>
+    </div>
+  );
+}
+
+function StatusTooltip({
+  active,
+  payload,
+}) {
+  if (
+    !active ||
+    !payload ||
+    payload.length === 0
+  ) {
+    return null;
+  }
+
+  const item = payload[0]?.payload || {};
+
+  const name =
+    item?.name ||
+    item?.label ||
+    item?.status ||
+    "-";
+
+  const value = toNumber(
+    item?.value ??
+      item?.jumlah ??
+      item?.total ??
+      0
+  );
+
+  const total = toNumber(
+    payload[0]?.payload?.chartTotal ??
+      0
+  );
+
+  const percentage =
+    total > 0
+      ? ((value / total) * 100).toFixed(1)
+      : "0.0";
+
+  let statusColor = "#4b5358";
+
+  if (name === "OPEN") {
+    statusColor = "#ffbd32";
+  } else if (name === "CLOSE") {
+    statusColor = "#67bd70";
+  } else if (
+    name === "TERLAMBAT"
+  ) {
+    statusColor = "#4b5358";
+  }
+
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        borderRadius: 10,
+        border: "1px solid #dfe7df",
+        boxShadow:
+          "0 8px 20px rgba(0,0,0,.08)",
+        padding: "12px 14px",
+        minWidth: 150,
+        maxWidth:
+          "calc(100vw - 40px)",
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#222222",
+          marginBottom: 8,
+          whiteSpace: "nowrap",
+        }}
+      >
+        Status Temuan
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 6,
+        }}
+      >
+        <span
+          style={{
+            width: 9,
+            height: 9,
+            borderRadius: "50%",
+            background: statusColor,
+            display: "inline-block",
+            flexShrink: 0,
+          }}
+        />
+
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: statusColor,
+          }}
+        >
+          {name}
+        </span>
+      </div>
+
+      <div
+        style={{
+          fontSize: 14,
+          color: "#4b8fe8",
+          marginBottom: 5,
+        }}
+      >
+        Jumlah :{" "}
+        {value.toLocaleString(
+          "id-ID"
+        )}{" "}
+        temuan
+      </div>
+
+      <div
+        style={{
+          fontSize: 13,
+          color: "#6b7280",
+        }}
+      >
+        Persentase : {percentage}%
       </div>
     </div>
   );
@@ -586,6 +725,7 @@ export function WilayahBar({ data = [] }) {
     "Bengkel",
     "Mixing",
     "Dipping",
+    "Office",
   ];
 
   /* =========================================================
@@ -877,8 +1017,8 @@ export function WilayahBar({ data = [] }) {
     <div
       style={{
         width: "100%",
-        height: "320px",
-        minHeight: "320px",
+        height: "380px",
+        minHeight: "380px",
         border: "none",
         outline: "none",
       }}
