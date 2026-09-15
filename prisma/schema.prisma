@@ -92,9 +92,9 @@ model master_pic {
   email      String? @db.VarChar(200)
   jabatan    String? @db.VarChar(150)
   aktif      Boolean @default(true)
-  wilayah_id Int
+  wilayah_id Int?
 
-  master_wilayah master_wilayah @relation(fields: [wilayah_id], references: [id_wilayah], map: "fk_pic_wilayah")
+  master_wilayah master_wilayah? @relation(fields: [wilayah_id], references: [id_wilayah], map: "fk_pic_wilayah")
 
   @@index([wilayah_id], map: "idx_pic_wilayah")
 }

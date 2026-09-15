@@ -120,11 +120,11 @@ export function StatusPie({ data = [] }) {
     0
   );
 
-  const COLORS = [
-    "#ffbd32",
-    "#67bd70",
-    "#4b5358",
-  ];
+  const STATUS_COLORS = {
+    OPEN: "#ffbd32",
+    CLOSE: "#67bd70",
+    TERLAMBAT: "#4b5358",
+  };
 
  const chartData = safeData.length
   ? safeData.map((item) => ({
@@ -174,10 +174,9 @@ export function StatusPie({ data = [] }) {
                   key={`${item.name}-${index}`}
                   fill={
                     safeData.length
-                      ? COLORS[
-                          index %
-                            COLORS.length
-                        ]
+                      ? STATUS_COLORS[
+                          String(item.name).toUpperCase()
+                        ] || "#4b5358"
                       : "#e5e9e5"
                   }
                 />

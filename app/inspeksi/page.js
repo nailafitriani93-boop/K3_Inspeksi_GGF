@@ -348,102 +348,112 @@ function tampilkanNotifikasiSukses(message) {
      LOAD MASTER
   ===================================================== */
 
-  useEffect(() => {
-    async function loadMasterAwal() {
-      try {
-        setLoadingAwal(true);
-        setErr("");
+  /* =====================================================
+   LOAD MASTER
+===================================================== */
 
-        const [
-          aktivitas,
-          grup,
-          wilayah,
-          mandor,
-        ] = await Promise.all([
-          ambilJson("/api/master/aktivitas"),
-          ambilJson("/api/master/grup-temuan"),
-          ambilJson("/api/master/wilayah"),
-          ambilJson("/api/master/mandor"),
-        ]);
+useEffect(() => {
+  async function loadMasterAwal() {
+    try {
+      setLoadingAwal(true);
+      setErr("");
 
-        setMaster((old) => ({
-          ...old,
-          aktivitas,
-          grup,
-          wilayah,
-          mandor,
-        }));
-      } catch (e) {
-        setErr(e.message);
-      } finally {
-        setLoadingAwal(false);
-      }
+      const [
+        aktivitas,
+        grup,
+        wilayah,
+        mandor,
+      ] = await Promise.all([
+        ambilJson("/api/master/aktivitas"),
+        ambilJson("/api/master/grup-temuan"),
+        ambilJson("/api/master/wilayah"),
+        ambilJson("/api/master/mandor"),
+      ]);
+
+      setMaster((old) => ({
+        ...old,
+        aktivitas,
+        grup,
+        wilayah,
+        mandor,
+      }));
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setLoadingAwal(false);
     }
+  }
 
-    loadMasterAwal();
-  }, []);
+  loadMasterAwal();
+}, []);
 
   /* =====================================================
      LOAD LOKASI BERDASARKAN WILAYAH
   ===================================================== */
 
-  useEffect(() => {
-    if (!f.no_wilayah) {
+ /* =====================================================
+   LOAD LOKASI BERDASARKAN WILAYAH
+===================================================== */
+
+useEffect(() => {
+  if (!f.no_wilayah) {
+    setMaster((old) => ({
+      ...old,
+      lokasi: [],
+      inspector: [],
+    }));
+
+    setF((old) => ({
+      ...old,
+      id_lokasi: "",
+    }));
+
+    return;
+  }
+
+  async function loadLokasi() {
+    try {
+      setLoadingWilayahData(true);
+      setErr("");
+
+      setF((old) => ({
+        ...old,
+        id_lokasi: "",
+      }));
+
+      const [lokasi, inspector] = await Promise.all([
+        ambilJson(
+          `/api/master/lokasi?noWilayah=${f.no_wilayah}`
+        ),
+        ambilJson(
+          `/api/master/pic?noWilayah=${f.no_wilayah}`
+        ),
+      ]);
+
+      setMaster((old) => ({
+        ...old,
+        lokasi: Array.isArray(lokasi)
+          ? lokasi
+          : lokasi?.data || [],
+        inspector: Array.isArray(inspector)
+          ? inspector
+          : inspector?.data || [],
+      }));
+    } catch (e) {
+      setErr(e.message);
+
       setMaster((old) => ({
         ...old,
         lokasi: [],
         inspector: [],
       }));
-
-      setF((old) => ({
-        ...old,
-        id_lokasi: "",
-        id_inspector: [],
-      }));
-
-      return;
+    } finally {
+      setLoadingWilayahData(false);
     }
+  }
 
-    async function loadLokasi() {
-      try {
-        setLoadingWilayahData(true);
-        setErr("");
-
-        setF((old) => ({
-          ...old,
-          id_lokasi: "",
-        }));
-
-        const [lokasi, inspector] = await Promise.all([
-          ambilJson(
-            `/api/master/lokasi?noWilayah=${f.no_wilayah}`
-          ),
-          ambilJson(
-            `/api/master/pic?noWilayah=${f.no_wilayah}`
-          ),
-        ]);
-
-        setMaster((old) => ({
-          ...old,
-          lokasi,
-          inspector,
-        }));
-      } catch (e) {
-        setErr(e.message);
-
-        setMaster((old) => ({
-          ...old,
-          lokasi: [],
-          inspector: [],
-        }));
-      } finally {
-        setLoadingWilayahData(false);
-      }
-    }
-
-    loadLokasi();
-  }, [f.no_wilayah]);
-
+  loadLokasi();
+}, [f.no_wilayah]);
   /* =====================================================
      GPS OTOMATIS
   ===================================================== */
@@ -944,10 +954,6 @@ function tampilkanNotifikasiSukses(message) {
   async function tambahInspector() {
     const nama = inspectorBaru.nama_pic.trim();
 
-    if (!f.no_wilayah) {
-      setErr("Pilih wilayah terlebih dahulu.");
-      return;
-    }
 
     if (!nama) {
       setErr("Nama inspector wajib diisi.");
@@ -966,7 +972,6 @@ function tampilkanNotifikasiSukses(message) {
         },
         body: JSON.stringify({
           nama_pic: nama,
-          no_wilayah: f.no_wilayah,
         }),
       });
 
@@ -978,13 +983,16 @@ function tampilkanNotifikasiSukses(message) {
         );
       }
 
-      const inspectorTerbaru = await ambilJson(
-        `/api/master/pic?noWilayah=${f.no_wilayah}`
-      );
-
       setMaster((old) => ({
         ...old,
-        inspector: inspectorTerbaru,
+        inspector: [
+          ...old.inspector,
+          d,
+        ].sort((a, b) =>
+          String(a.nama_pic).localeCompare(
+            String(b.nama_pic)
+          )
+        ),
       }));
 
       setF((old) => ({
@@ -1042,13 +1050,12 @@ function tampilkanNotifikasiSukses(message) {
         );
       }
 
-      const inspectorTerbaru = await ambilJson(
-        `/api/master/pic?noWilayah=${f.no_wilayah}`
-      );
-
       setMaster((old) => ({
         ...old,
-        inspector: inspectorTerbaru,
+        inspector: old.inspector.filter(
+          (item) =>
+            String(item.id_pic) !== String(inspectorId)
+        ),
       }));
 
       setF((old) => ({
@@ -1947,32 +1954,30 @@ function tampilkanNotifikasiSukses(message) {
 
               <div className="selectrow">
 
-                <SearchSelect
-                  label=""
-                  value={
-                    f.id_inspector
-                  }
-                  multiple
-                  onChange={(x) =>
-                    set(
-                      "id_inspector",
-                      x
-                    )
-                  }
-                  options={
-                    master.inspector
-                  }
-                  valueKey="id_pic"
-                  labelKey="nama_pic"
-                  disabled={!f.no_wilayah || loadingWilayahData}
-                  placeholder={
-                    !f.no_wilayah
-                      ? "Pilih wilayah terlebih dahulu..."
-                      : loadingWilayahData
-                      ? "Memuat inspector..."
-                      : "Cari inspector..."
-                  }
-                />
+               <SearchSelect
+  label=""
+  value={
+    f.id_inspector
+  }
+  multiple
+  onChange={(x) =>
+    set(
+      "id_inspector",
+      x
+    )
+  }
+  options={
+    master.inspector
+  }
+  valueKey="id_pic"
+  labelKey="nama_pic"
+  disabled={loadingAwal}
+  placeholder={
+    loadingAwal
+      ? "Memuat inspector..."
+      : "Cari inspector..."
+  }
+/>
 
                 <button
                   type="button"

@@ -1,49 +1,13 @@
 import { prisma } from "@/lib/db";
 
-async function cariWilayahId(value) {
-  const raw = String(value ?? "").trim().toLowerCase();
-  const noWilayah = Number(raw);
-
-  if (Number.isInteger(noWilayah) && noWilayah > 0) {
-    const rows = await prisma.$queryRaw`
-      SELECT id_wilayah
-      FROM public.master_wilayah
-      WHERE no_wilayah = ${noWilayah}
-      LIMIT 1
-    `;
-
-    return rows[0]?.id_wilayah ?? null;
-  }
-
-  const rows = await prisma.$queryRaw`
-    SELECT id_wilayah
-    FROM public.master_wilayah
-    WHERE LOWER(REGEXP_REPLACE(nama_wilayah, '[^a-z]', '', 'g'))
-      = LOWER(REGEXP_REPLACE(${raw}, '[^a-z]', '', 'g'))
-    LIMIT 1
-  `;
-
-  return rows[0]?.id_wilayah ?? null;
-}
-
 export async function GET(req) {
   try {
-    const { searchParams } = new URL(req.url);
-    const noWilayahRaw = searchParams.get("noWilayah") ?? searchParams.get("wilayahNama");
-    const wilayahId = await cariWilayahId(noWilayahRaw);
-
-    if (!noWilayahRaw || !wilayahId) {
-      return Response.json([]);
-    }
-
     const rows = await prisma.$queryRaw`
       SELECT
         mp.id_pic,
-        mp.nama_pic,
-        mp.wilayah_id
+        mp.nama_pic
       FROM public.master_pic mp
       WHERE mp.aktif = TRUE
-        AND mp.wilayah_id = ${Number(wilayahId)}
       ORDER BY mp.nama_pic
     `;
 
@@ -61,8 +25,6 @@ export async function POST(req) {
     body = await req.json();
 
     const nama = String(body?.nama_pic ?? "").trim();
-    const noWilayah = body?.no_wilayah;
-
     if (!nama) {
       return Response.json(
         { error: "Nama inspector wajib diisi." },
@@ -70,20 +32,10 @@ export async function POST(req) {
       );
     }
 
-    const wilayahId = await cariWilayahId(noWilayah);
-
-    if (!wilayahId) {
-      return Response.json(
-        { error: "Wilayah inspector tidak valid." },
-        { status: 400 }
-      );
-    }
-
     const existing = await prisma.$queryRaw`
-      SELECT id_pic, nama_pic, wilayah_id, aktif
+      SELECT id_pic, nama_pic, aktif
       FROM public.master_pic
-      WHERE wilayah_id = ${wilayahId}
-        AND LOWER(TRIM(nama_pic)) = LOWER(TRIM(${nama}))
+      WHERE LOWER(TRIM(nama_pic)) = LOWER(TRIM(${nama}))
       LIMIT 1
     `;
 
@@ -99,22 +51,28 @@ export async function POST(req) {
         UPDATE public.master_pic
         SET aktif = TRUE
         WHERE id_pic = ${Number(existing[0].id_pic)}
-        RETURNING id_pic, nama_pic, wilayah_id
+        RETURNING id_pic, nama_pic
       `;
 
       return Response.json(restored[0], { status: 201 });
     }
 
-    const nextId = await prisma.$queryRaw`
-      SELECT COALESCE(MAX(id_pic), 0) + 1 AS id_pic
-      FROM public.master_pic
-    `;
+    const rows = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT pg_advisory_xact_lock(827361, 1)
+      `;
 
-    const rows = await prisma.$queryRaw`
-      INSERT INTO public.master_pic (id_pic, nama_pic, wilayah_id, aktif)
-      VALUES (${Number(nextId[0].id_pic)}, ${nama}, ${wilayahId}, TRUE)
-      RETURNING id_pic, nama_pic, wilayah_id
-    `;
+      const nextId = await tx.$queryRaw`
+        SELECT COALESCE(MAX(id_pic), 0) + 1 AS id_pic
+        FROM public.master_pic
+      `;
+
+      return tx.$queryRaw`
+        INSERT INTO public.master_pic (id_pic, nama_pic, wilayah_id, aktif)
+        VALUES (${Number(nextId[0].id_pic)}, ${nama}, NULL, TRUE)
+        RETURNING id_pic, nama_pic
+      `;
+    });
 
     return Response.json(rows[0], { status: 201 });
   } catch (e) {
