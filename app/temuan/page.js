@@ -27,6 +27,7 @@ const CLOSE_ALLOWED_ROLES = [
   "ADMIN_DEVELOPER",
   "ADMIN",
   "ADMIN_INSPECTOR",
+  "ADMIN_INSPEKSI",
   "INSPECTOR",
 ];
 const GRUP_TEMUAN = [
@@ -4289,11 +4290,18 @@ setData(
 
                         {selectedTemuan?.foto_url ? (
                           <img
-                            src={
-                              selectedTemuan.foto_url
-                            }
-                            alt="Foto temuan"
-                          />
+  src={
+    selectedTemuan.foto_url
+      ? selectedTemuan.foto_url.startsWith("/")
+        ? selectedTemuan.foto_url
+        : `/${selectedTemuan.foto_url}`
+      : ""
+  }
+  alt="Foto temuan"
+  onError={(e) => {
+    e.currentTarget.style.display = "none";
+  }}
+/>
                         ) : (
                           <div className="no-photo">
                             Tidak ada foto temuan.

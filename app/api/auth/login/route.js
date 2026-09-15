@@ -128,6 +128,7 @@ export async function POST(request) {
         "ADMIN",
         "INSPECTOR",
         "ADMIN_INSPECTOR",
+        "ADMIN_INSPEKSI",
         "ADMIN_DEVELOPER",
       ].includes(role)
     ) {
