@@ -363,11 +363,13 @@ useEffect(() => {
         grup,
         wilayah,
         mandor,
+        inspector,
       ] = await Promise.all([
         ambilJson("/api/master/aktivitas"),
         ambilJson("/api/master/grup-temuan"),
         ambilJson("/api/master/wilayah"),
         ambilJson("/api/master/mandor"),
+        ambilJson("/api/master/pic"),
       ]);
 
       setMaster((old) => ({
@@ -376,6 +378,9 @@ useEffect(() => {
         grup,
         wilayah,
         mandor,
+        inspector: Array.isArray(inspector)
+          ? inspector
+          : inspector?.data || [],
       }));
     } catch (e) {
       setErr(e.message);
@@ -400,7 +405,6 @@ useEffect(() => {
     setMaster((old) => ({
       ...old,
       lokasi: [],
-      inspector: [],
     }));
 
     setF((old) => ({
@@ -445,7 +449,6 @@ useEffect(() => {
       setMaster((old) => ({
         ...old,
         lokasi: [],
-        inspector: [],
       }));
     } finally {
       setLoadingWilayahData(false);
