@@ -628,21 +628,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     let active = true;
-
-    if (!sessionStorage.getItem("user")) {
-      fetch("/api/auth/logout", {
-        method: "POST",
-      }).finally(() => {
-        if (active) {
-          setUser(null);
-        }
-      });
-
-      return () => {
-        active = false;
-      };
-    }
-
     fetch("/api/auth/me", {
       cache: "no-store",
     })
