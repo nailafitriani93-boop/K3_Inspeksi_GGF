@@ -3,6 +3,23 @@
 
 BEGIN;
 
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS kelola_user BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS public.activity_logs (
+  id BIGSERIAL PRIMARY KEY,
+  actor_id INTEGER NULL,
+  actor_name VARCHAR(200) NOT NULL,
+  actor_username VARCHAR(100) NULL,
+  actor_role VARCHAR(50) NULL,
+  action VARCHAR(40) NOT NULL,
+  description TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at
+  ON public.activity_logs (created_at DESC);
+
 ALTER TABLE public.temuan_k3
   ADD COLUMN IF NOT EXISTS no_wilayah SMALLINT NULL,
   ADD COLUMN IF NOT EXISTS status_temuan VARCHAR(10) NOT NULL DEFAULT 'OPEN',

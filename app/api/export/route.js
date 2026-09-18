@@ -160,6 +160,8 @@ export async function GET(req) {
 
         mg.nama_grup,
 
+        ik.catatan_inspeksi AS deskripsi_inspeksi,
+
         CASE
           WHEN t.latitude IS NOT NULL
            AND t.longitude IS NOT NULL
@@ -193,6 +195,9 @@ export async function GET(req) {
 
       LEFT JOIN public.master_grup_temuan mg
         ON mg.id_grup = t.id_grup
+
+      LEFT JOIN public.inspeksi_k3 ik
+        ON ik.id_inspeksi = t.id_inspeksi
 
       ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
 

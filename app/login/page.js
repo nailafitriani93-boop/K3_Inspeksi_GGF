@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const nextPath =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("next");
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -140,6 +143,8 @@ export default function LoginPage() {
         nama_lengkap:
           result.user.nama_lengkap,
         role: result.user.role,
+        akses_dashboard: Boolean(result.user.akses_dashboard),
+        kelola_user: Boolean(result.user.kelola_user),
       };
 
       /*
@@ -214,7 +219,11 @@ export default function LoginPage() {
        * sesuai sistem kamu sebelumnya.
        */
 
-      router.replace("/inspeksi");
+      router.replace(
+        ["/dashboard", "/inspeksi", "/users"].includes(nextPath)
+          ? nextPath
+          : "/users"
+      );
 
     } catch (error) {
       console.error(

@@ -119,8 +119,21 @@ function isTemuanTerlambat(item) {
 }
 
 function wilayahLabel(item) {
-  if (item?.master_wilayah?.nama_wilayah) {
-    return item.master_wilayah.nama_wilayah;
+  const rawNama =
+    item?.master_wilayah?.nama_wilayah ||
+    item?.nama_wilayah;
+
+  if (rawNama) {
+    const label = String(rawNama).trim();
+
+    if (
+      label.toLowerCase() === "mixer" ||
+      label.toLowerCase() === "mixing"
+    ) {
+      return "Mixing";
+    }
+
+    return label;
   }
 
   if (item?.no_wilayah) {
@@ -248,6 +261,18 @@ export default function DataTemuanPage() {
       console.error(err);
       window.location.href = "/login";
     }
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json();
+
+        if (response.ok && result.success && result.user) {
+          setCurrentUser(result.user);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // ============================================================
@@ -816,6 +841,13 @@ setData(
     );
   }
 
+  const roleCode = String(currentUser?.role || "")
+    .trim()
+    .toUpperCase();
+  const canUsers =
+    roleCode === "ADMIN_DEVELOPER" ||
+    Boolean(currentUser?.kelola_user);
+
   return (
     <>
       <style jsx global>{`
@@ -971,7 +1003,7 @@ setData(
           display: flex;
           align-items: center;
           justify-content: flex-end;
-          gap: 8px;
+          gap: 5px !important;
 
           height: 100%;
         }
@@ -1165,11 +1197,17 @@ setData(
 
           border-radius: 50%;
 
-          background: #099447;
+          background: linear-gradient(135deg, #18843c, #0a9b4d);
           color: #fff;
 
           font-size: 18px;
           font-weight: 800;
+        }
+
+        .profile-symbol {
+          width: 18px;
+          height: 18px;
+          display: block;
         }
 
         .profile-header-info {
@@ -1278,6 +1316,36 @@ setData(
 
           max-width: 1660px;
           margin: 0 auto;
+        }
+
+        .temuan-add-finding-row {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 8px;
+        }
+
+        .temuan-add-finding {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          padding: 5px 8px;
+          min-height: 0;
+          height: auto;
+          border-radius: 5px;
+          border: 1px solid #08783d;
+          color: #08783d;
+          background: #edf7f0;
+          font-size: 9px;
+          font-weight: 700;
+          line-height: 1;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+
+        .temuan-add-finding:hover {
+          color: #ffffff;
+          background: #08783d;
         }
 
         .workspace {
@@ -2876,7 +2944,13 @@ setData(
           }
 
           .temuan-page .nav .nav-logout {
-            display: none !important;
+            display: flex !important;
+            width: 100% !important;
+            min-height: 42px !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 10px 12px !important;
+            border-radius: 9px !important;
           }
 
           .temuan-page .mobile-menu-wrapper {
@@ -2931,11 +3005,16 @@ setData(
           justify-content: center !important;
           flex: 0 0 34px !important;
           border-radius: 50% !important;
-          background: #099447 !important;
+          background: linear-gradient(135deg, #18843c, #0a9b4d) !important;
           color: #ffffff !important;
           font-family: "Poppins", sans-serif !important;
           font-size: 14px !important;
           font-weight: 600 !important;
+        }
+
+        .temuan-page .profile-avatar .profile-symbol {
+          width: 18px !important;
+          height: 18px !important;
         }
 
         .temuan-page .profile-button > .profile-info {
@@ -2981,16 +3060,24 @@ setData(
         }
 
         .temuan-page .nav-logout {
-          min-height: 42px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: auto !important;
+          min-width: 0 !important;
+          flex: 0 0 auto !important;
+          box-sizing: border-box !important;
+          min-height: 30px !important;
+          height: 30px !important;
           border: 1px solid #d9e3dc !important;
-          padding: 10px 15px !important;
-          border-radius: 10px !important;
+          padding: 5px 9px !important;
+          border-radius: 7px !important;
           background: #ffffff !important;
           color: #304037 !important;
           font-family: "Poppins", sans-serif !important;
-          font-size: 11px !important;
+          font-size: 10px !important;
           font-weight: 600 !important;
-          line-height: 1.2 !important;
+          line-height: 1.1 !important;
           white-space: nowrap !important;
         }
 
@@ -2998,6 +3085,32 @@ setData(
           background: #f7faf8 !important;
           color: #087f3e !important;
           border-color: #cbd8cf !important;
+        }
+
+        .temuan-page .nav > a.nav-users-button {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          min-height: 27px !important;
+          height: 27px !important;
+          padding: 0 10px !important;
+          gap: 5px !important;
+          border: 1px solid #16833f !important;
+          border-radius: 7px !important;
+          background: #16833f !important;
+          color: #ffffff !important;
+          text-decoration: none !important;
+          font-family: "Poppins", sans-serif !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          line-height: 1.1 !important;
+          white-space: nowrap !important;
+        }
+
+        .temuan-page .nav > a.nav-users-button:hover {
+          background: #117236 !important;
+          border-color: #117236 !important;
+          color: #ffffff !important;
         }
 
         @media (max-width: 768px) {
@@ -3221,6 +3334,53 @@ setData(
             overscroll-behavior-x: contain;
           }
         }
+        .temuan-page .nav-logout-icon {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .temuan-page .nav .nav-logout {
+            display: none !important;
+          }
+
+          .temuan-page .nav .profile-wrapper {
+            width: auto !important;
+            flex: 0 0 auto !important;
+          }
+
+          .temuan-page .nav .profile-button {
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0 !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+
+          .temuan-page .nav .profile-info,
+          .temuan-page .nav .profile-chevron {
+            display: none !important;
+          }
+
+          .temuan-page .nav .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            flex-basis: 28px !important;
+          }
+
+          .temuan-page .nav .nav-logout {
+            display: none !important;
+          }
+
+          .temuan-page .nav > a.nav-page {
+            font-family: "Poppins", sans-serif !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            line-height: 1.2 !important;
+          }
+        }
       `}</style>
 
       <main className="temuan-page">
@@ -3258,10 +3418,6 @@ setData(
             aria-label="Navigasi utama"
           >
 
-            <Link href="/inspeksi" className="nav-page">
-              Form Inspeksi
-            </Link>
-
             <Link href="/dashboard" className="nav-page">
               Dashboard
             </Link>
@@ -3271,6 +3427,10 @@ setData(
               className="nav-page active"
             >
               Data Temuan
+            </Link>
+
+            <Link href="/inspeksi" className="nav-page">
+              Form Inspeksi
             </Link>
 
             <div
@@ -3289,9 +3449,10 @@ setData(
               >
 
                 <span className="profile-avatar">
-                  {(currentUser?.nama_lengkap || "U")
-                    .charAt(0)
-                    .toUpperCase()}
+                  <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+                    <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
+                  </svg>
                 </span>
 
                 <span className="profile-info">
@@ -3320,12 +3481,10 @@ setData(
                   <div className="profile-popup-header">
 
                     <div className="profile-avatar">
-                      {(
-                        currentUser?.nama_lengkap ||
-                        "U"
-                      )
-                        .charAt(0)
-                        .toUpperCase()}
+                      <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+                        <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
+                      </svg>
                     </div>
 
                     <div className="profile-header-info">
@@ -3416,8 +3575,39 @@ setData(
               className="nav-logout"
               onClick={handleLogout}
             >
-              Logout
+              <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
+              </svg>
+              <span className="nav-logout-label">Logout</span>
             </button>
+
+            {canUsers && (
+              <Link
+                href="/users"
+                className="nav-users-button"
+                onClick={() => setProfileOpen(false)}
+              >
+                <span className="dashboard-add-finding-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none">
+                    <path
+                      d="M12 3.5 19 6v5.1c0 4.4-2.8 7.8-7 9.4-4.2-1.6-7-5-7-9.4V6l7-2.5Z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="m8.7 12.2 2.1 2.1 4.5-4.6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                Kelola User
+              </Link>
+            )}
 
           </nav>
 
@@ -3442,6 +3632,15 @@ setData(
         ====================================================== */}
 
         <div className="page-content">
+
+          <div className="temuan-add-finding-row">
+            <Link
+              href="/inspeksi"
+              className="temuan-add-finding"
+            >
+              + Tambah Temuan
+            </Link>
+          </div>
 
           {error && (
             <div className="error-box">

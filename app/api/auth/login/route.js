@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
+import { writeActivityLog } from "@/lib/activity-log";
 
 export async function GET() {
   return NextResponse.json({
@@ -44,7 +45,6 @@ export async function POST(request) {
           status: 400
         }
       );
-
     }
 
     /*
@@ -130,6 +130,10 @@ export async function POST(request) {
         "ADMIN_INSPECTOR",
         "ADMIN_INSPEKSI",
         "ADMIN_DEVELOPER",
+        "ADMIN_SISTEM_MUTU",
+        "TEAM_WILAYAH",
+        "PIC",
+        "VIEWER",
       ].includes(role)
     ) {
       return NextResponse.json(
@@ -179,7 +183,18 @@ export async function POST(request) {
       nama_lengkap: user.nama_lengkap,
       email: user.email || "",
       role,
-      akses_dashboard: Boolean(user.akses_dashboard),
+
+      akses_dashboard:
+        Boolean(user.akses_dashboard),
+
+      akses_form_inspeksi:
+        Boolean(user.akses_form_inspeksi),
+
+      akses_data_temuan:
+        Boolean(user.akses_data_temuan),
+
+      kelola_user:
+        Boolean(user.kelola_user),
     };
 
     /*
@@ -202,16 +217,32 @@ export async function POST(request) {
       username: user.username,
       nama: user.nama_lengkap,
       role,
-      akses_dashboard: Boolean(user.akses_dashboard),
+
+      akses_dashboard:
+        Boolean(user.akses_dashboard),
+
+      akses_form_inspeksi:
+        Boolean(user.akses_form_inspeksi),
+
+      akses_data_temuan:
+        Boolean(user.akses_data_temuan),
+
+      kelola_user:
+        Boolean(user.kelola_user),
     });
 
     response.cookies.set("k3_token", token, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 8,
       path: "/",
     });
+
+    await writeActivityLog(
+      userData,
+      "LOGIN",
+      `Login berhasil ke sistem sebagai ${role}.`
+    );
 
     return response;
   } catch (error) {

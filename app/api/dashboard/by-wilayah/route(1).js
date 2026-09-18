@@ -192,13 +192,6 @@ export async function GET(req) {
                 ).trim()
               : "";
 
-          if (
-            namaWilayah &&
-            namaWilayah.toLowerCase() === "mixer"
-          ) {
-            namaWilayah = "Mixing";
-          }
-
           /*
             ====================================================
             FALLBACK NAMA WILAYAH

@@ -66,15 +66,12 @@ function normalizeWilayahName(value) {
     return "Dipping";
   }
 
-  if (name.toLowerCase() === "mixing") {
+  if (
+    name.toLowerCase() === "mixing" ||
+    name.toLowerCase() === "mixer"
+  ) {
     return "Mixing";
   }
-
-  /*
-    Mixer sengaja TIDAK dimasukkan.
-    Kategori Mixer akan dibuang pada
-    proses filter Temuan Per Wilayah.
-  */
 
   const wilayahMatch = name.match(
     /^wilayah\s*(\d+)$/i

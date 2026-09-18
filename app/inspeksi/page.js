@@ -51,7 +51,6 @@ function fotoKeDataUrl(file, maxWidth = 1280, quality = 0.72) {
 
         resolve(canvas.toDataURL("image/jpeg", quality));
       };
-
       img.src = reader.result;
     };
 
@@ -120,20 +119,16 @@ export default function Inspeksi() {
     role: "",
   });
 
-  /* =====================================================
-     REVISI NAVBAR
-  ===================================================== */
-
   const [showProfile, setShowProfile] = useState(false);
-const [showMobileNav, setShowMobileNav] = useState(false);
-const profileRef = useRef(null);
+  const [showMobileNav, setShowMobileNav] = useState(false);
+  const profileRef = useRef(null);
 
-function tampilkanNotifikasiSukses(message) {
-  setSuccessToast(message);
-  window.setTimeout(() => {
-    setSuccessToast("");
-  }, 3500);
-}
+  function tampilkanNotifikasiSukses(message) {
+    setSuccessToast(message);
+    window.setTimeout(() => {
+      setSuccessToast("");
+    }, 3500);
+  }
 
   useEffect(() => {
     try {
@@ -142,6 +137,18 @@ function tampilkanNotifikasiSukses(message) {
         setCurrentUser(JSON.parse(stored));
       }
     } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json();
+
+        if (response.ok && result.success && result.user) {
+          setCurrentUser(result.user);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -160,26 +167,12 @@ function tampilkanNotifikasiSukses(message) {
       }
     }
 
-    document.addEventListener(
-      "mousedown",
-      handleOutsideClick
-    );
-
-    document.addEventListener(
-      "keydown",
-      handleEscape
-    );
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleOutsideClick
-      );
-
-      document.removeEventListener(
-        "keydown",
-        handleEscape
-      );
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
@@ -194,7 +187,6 @@ function tampilkanNotifikasiSukses(message) {
 
     try {
       setLoggingOut(true);
-
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
@@ -1112,6 +1104,14 @@ useEffect(() => {
       f.hasil_inspeksi ===
       "TIDAK_ADA_TEMUAN"
     ) {
+      if (!f.deskripsi.trim()) {
+        setErr(
+          "Deskripsi inspeksi wajib diisi."
+        );
+
+        return;
+      }
+
       if (!fotoInspeksi.fotoDataUrl) {
         setErr(
           "Foto bukti inspeksi dan sosialisasi wajib diambil atau dipilih."
@@ -1138,6 +1138,7 @@ useEffect(() => {
               id_grup: null,
 
               deskripsi:
+                f.deskripsi.trim() ||
                 "Inspeksi dan sosialisasi telah selesai dilakukan. Tidak ditemukan temuan K3.",
 
               status: "SELESAI",
@@ -1395,6 +1396,13 @@ useEffect(() => {
     }
   }
 
+  const roleCode = String(currentUser.role || "")
+    .trim()
+    .toUpperCase();
+  const canUsers =
+    roleCode === "ADMIN_DEVELOPER" ||
+    Boolean(currentUser.kelola_user);
+
   return (
     <main className="shell">
 
@@ -1414,7 +1422,7 @@ useEffect(() => {
             <div className="logo">
               <img
                 src="/ggf-estate-pg01.png"
-                alt="GGF Estate PG 01"
+                alt="Sistem Manajemen Informasi Estate PG1"
               />
             </div>
           </Link>
@@ -1425,38 +1433,27 @@ useEffect(() => {
             </b>
 
             <span>
-              Sistem Informasi Manajemen Estate PG1
+              Sistem Manajemen Informasi Estate PG1
             </span>
           </div>
 
         </div>
 
-       <nav
-  className={`nav ${
-    showMobileNav ? "mobile-nav-open" : ""
-  }`}
-  aria-label="Navigasi utama"
->
+        <nav
+          className={`nav ${showMobileNav ? "mobile-nav-open" : ""}`}
+          aria-label="Navigasi utama"
+        >
 
-          <Link
-            href="/inspeksi"
-            className="nav-page active"
-          >
-            Form Inspeksi
-          </Link>
-
-          <Link
-            href="/dashboard"
-            className="nav-page"
-          >
+          <Link href="/dashboard" className="nav-page">
             Dashboard
           </Link>
 
-          <Link
-            href="/temuan"
-            className="nav-page"
-          >
+          <Link href="/temuan" className="nav-page">
             Data Temuan
+          </Link>
+
+          <Link href="/inspeksi" className="nav-page active">
+            Form Inspeksi
           </Link>
 
           {/* PROFILE */}
@@ -1468,23 +1465,19 @@ useEffect(() => {
 
             <button
               type="button"
-              className={`profile-button ${
-                showProfile
-                  ? "profile-open"
-                  : ""
-              }`}
+              className="profile-button"
               onClick={() =>
                 setShowProfile(
                   (x) => !x
                 )
               }
-              aria-expanded={
-                showProfile
-              }
             >
 
               <span className="profile-avatar">
-                {(currentUser.nama_lengkap || "U").charAt(0).toUpperCase()}
+                <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+                  <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
+                </svg>
               </span>
 
               <span className="profile-info">
@@ -1494,7 +1487,7 @@ useEffect(() => {
                 </strong>
 
                 <small>
-                  {(currentUser.role || "").replaceAll("_", " ")}
+                  {currentUser.role || "-"}
                 </small>
 
               </span>
@@ -1509,20 +1502,23 @@ useEffect(() => {
 
               <div className="profile-popup">
 
-                <div className="profile-popup-head">
+                <div className="profile-popup-header">
 
-                  <div className="profile-popup-avatar">
-                    {(currentUser.nama_lengkap || "U").charAt(0).toUpperCase()}
+                  <div className="profile-avatar">
+                    <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+                      <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
+                    </svg>
                   </div>
 
-                  <div className="profile-popup-name">
+                  <div className="profile-header-info">
 
                     <strong>
                       {currentUser.nama_lengkap || "Pengguna"}
                     </strong>
 
                     <span>
-                      {(currentUser.role || "").replaceAll("_", " ")}
+                      {currentUser.role || "-"}
                     </span>
 
                   </div>
@@ -1533,9 +1529,7 @@ useEffect(() => {
 
                 <div className="profile-detail">
 
-                  <span>
-                    Nama Lengkap
-                  </span>
+                  <span className="profile-label">Nama Lengkap</span>
 
                   <strong>
                     {currentUser.nama_lengkap || "-"}
@@ -1545,9 +1539,7 @@ useEffect(() => {
 
                 <div className="profile-detail">
 
-                  <span>
-                    Username
-                  </span>
+                  <span className="profile-label">Username</span>
 
                   <strong>
                     {currentUser.username || "-"}
@@ -1557,13 +1549,17 @@ useEffect(() => {
 
                 <div className="profile-detail">
 
-                  <span>
-                    Role
-                  </span>
+                  <span className="profile-label">Role</span>
 
-                  <strong className="role-badge">
-                    {(currentUser.role || "-").replaceAll("_", " ")}
-                  </strong>
+                  <span
+                    className={`role-badge ${
+                      currentUser.role === "KABAG"
+                        ? "role-kabag"
+                        : "role-kasie"
+                    }`}
+                  >
+                    {currentUser.role || "-"}
+                  </span>
 
                 </div>
 
@@ -1571,7 +1567,7 @@ useEffect(() => {
 
                 <button
                   type="button"
-                  className="popup-logout"
+                  className="profile-logout"
                   onClick={() => {
                     setShowProfile(false);
                     logout();
@@ -1581,9 +1577,12 @@ useEffect(() => {
                   }
                 >
 
-                  <span className="logout-icon">
-                    ⇥
-                  </span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z"
+                      fill="currentColor"
+                    />
+                  </svg>
 
                   <span>
                     {loggingOut
@@ -1607,10 +1606,39 @@ useEffect(() => {
             onClick={logout}
             disabled={loggingOut}
           >
-            {loggingOut
-              ? "Keluar..."
-              : "Logout"}
+            <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
+            </svg>
+              <span className="nav-logout-label">{loggingOut ? "Keluar..." : "Logout"}</span>
           </button>
+
+          {canUsers && (
+            <Link
+              href="/users"
+              className="nav-users-button"
+              onClick={() => setShowProfile(false)}
+            >
+              <span className="dashboard-add-finding-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none">
+                  <path
+                    d="M12 3.5 19 6v5.1c0 4.4-2.8 7.8-7 9.4-4.2-1.6-7-5-7-9.4V6l7-2.5Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="m8.7 12.2 2.1 2.1 4.5-4.6"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              Kelola User
+            </Link>
+          )}
 
         </nav>
 
@@ -2222,7 +2250,7 @@ useEffect(() => {
                     <div>
 
                       <label>
-                        Foto Bukti Inspeksi & Sosialisasi
+                        Deskripsi Inspeksi
                         <span className="required-mark">
                           *
                         </span>
@@ -2233,6 +2261,33 @@ useEffect(() => {
                     <span className="inspection-status selesai">
                       SELESAI
                     </span>
+
+                  </div>
+
+                  <div className="inspection-description-box">
+                    <textarea
+                      rows="4"
+                      value={f.deskripsi}
+                      onChange={(e) =>
+                        set("deskripsi", e.target.value)
+                      }
+                      placeholder="Jelaskan hasil inspeksi dan sosialisasi yang dilakukan..."
+                      required
+                    />
+                  </div>
+
+                  <div className="inspection-proof-head">
+
+                    <div>
+
+                      <label>
+                        Foto Bukti Inspeksi & Sosialisasi
+                        <span className="required-mark">
+                          *
+                        </span>
+                      </label>
+
+                    </div>
 
                   </div>
 
@@ -3059,7 +3114,7 @@ useEffect(() => {
           gap: 20px;
           padding: 10px clamp(18px,4vw,54px);
           background: rgba(255,255,255,.96);
-          border-bottom: 1px solid #e3eae5;
+          border-bottom: 0;
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
         }
@@ -3117,7 +3172,7 @@ useEffect(() => {
         .nav {
           display: flex;
           align-items: center;
-          gap: 7px;
+          gap: 5px !important;
           font-family: "Poppins", sans-serif;
           font-weight: 600;
         }
@@ -3200,11 +3255,17 @@ useEffect(() => {
           align-items: center;
           justify-content: center;
           border-radius: 50%;
-          background: var(--green-600);
+          background: linear-gradient(135deg, #18843c, #0a9b4d);
           color: #ffffff;
           font-family: "Poppins", sans-serif;
           font-size: 14px;
           font-weight: 600;
+        }
+
+        .profile-symbol {
+          width: 18px;
+          height: 18px;
+          display: block;
         }
 
         .profile-info {
@@ -3270,14 +3331,16 @@ useEffect(() => {
           }
         }
 
-        .profile-popup-head {
+        .profile-popup-head,
+        .profile-popup-header {
           display: flex;
           align-items: center;
           gap: 12px;
           padding: 1px 0 3px;
         }
 
-        .profile-popup-avatar {
+        .profile-popup-avatar,
+        .profile-popup-header > .profile-avatar {
           width: 43px;
           height: 43px;
           flex: 0 0 43px;
@@ -3285,28 +3348,37 @@ useEffect(() => {
           align-items: center;
           justify-content: center;
           border-radius: 50%;
-          background: var(--green-600);
+          background: linear-gradient(135deg, #18843c, #0a9b4d);
           color: #ffffff;
           font-family: "Poppins", sans-serif;
           font-size: 17px;
           font-weight: 600;
         }
 
-        .profile-popup-name {
+        .profile-popup-avatar .profile-symbol,
+        .profile-popup-header > .profile-avatar .profile-symbol {
+          width: 22px;
+          height: 22px;
+        }
+
+        .profile-popup-name,
+        .profile-header-info {
           display: flex;
           flex-direction: column;
           gap: 4px;
           min-width: 0;
         }
 
-        .profile-popup-name strong {
+        .profile-popup-name strong,
+        .profile-header-info strong {
           color: #26382d;
           font-family: "Poppins", sans-serif;
           font-size: 13px;
           font-weight: 600;
         }
 
-        .profile-popup-name span {
+        .profile-popup-name span,
+        .profile-header-info span {
           color: #7b8980;
           font-family: "Poppins", sans-serif;
           font-size: 9px;
@@ -3356,7 +3428,8 @@ useEffect(() => {
           font-weight: 600 !important;
         }
 
-        .popup-logout {
+        .popup-logout,
+        .profile-logout {
           width: 100%;
           min-height: 39px;
           display: flex;
@@ -3375,12 +3448,14 @@ useEffect(() => {
             border-color .16s ease;
         }
 
-        .popup-logout:hover {
+        .popup-logout:hover,
+        .profile-logout:hover {
           background: #fff0f0;
           border-color: #ebc2c2;
         }
 
-        .popup-logout:disabled {
+        .popup-logout:disabled,
+        .profile-logout:disabled {
           opacity: .6;
           cursor: not-allowed;
         }
@@ -3391,15 +3466,24 @@ useEffect(() => {
         }
 
         .nav-logout {
-          min-height: 42px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: auto;
+          min-width: 0;
+          flex: 0 0 auto;
+          box-sizing: border-box;
+          min-height: 30px;
+          height: 30px;
           border: 1px solid #d9e3dc;
-          border-radius: 10px;
-          padding: 10px 15px;
+          border-radius: 7px;
+          padding: 5px 9px;
           background: #ffffff;
           color: #304037;
           font-family: "Poppins", sans-serif;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 600;
+          line-height: 1.1;
           white-space: nowrap;
           transition:
             background .16s ease,
@@ -3416,6 +3500,32 @@ useEffect(() => {
         .nav-logout:disabled {
           opacity: .65;
           cursor: not-allowed;
+        }
+
+        .nav-users-button {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          min-height: 27px !important;
+          height: 27px !important;
+          padding: 0 10px !important;
+          gap: 5px !important;
+          border: 1px solid #16833f !important;
+          border-radius: 7px !important;
+          background: #16833f !important;
+          color: #ffffff !important;
+          text-decoration: none !important;
+          font-family: "Poppins", sans-serif !important;
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          line-height: 1.1 !important;
+          white-space: nowrap !important;
+        }
+
+        .nav-users-button:hover {
+          background: #117236 !important;
+          border-color: #117236 !important;
+          color: #ffffff !important;
         }
 
         .main {
@@ -4679,6 +4789,21 @@ useEffect(() => {
   display: none !important;
 }
 
+          .shell .topbar .logo {
+            width: 82px !important;
+            height: 39px !important;
+            min-width: 82px !important;
+            flex: 0 0 82px !important;
+          }
+
+          .shell .topbar .logo img {
+            width: 82px !important;
+            max-width: 82px !important;
+            height: 39px !important;
+            max-height: 39px !important;
+            object-fit: contain !important;
+          }
+
 .nav .nav-page {
   width: 100% !important;
   min-width: 0 !important;
@@ -5390,21 +5515,276 @@ useEffect(() => {
   }
 
   .nav-logout {
-    min-height: 42px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
+    min-height: 30px !important;
+    height: 30px !important;
 
-    padding: 10px 15px !important;
+    padding: 5px 9px !important;
 
-    border-radius: 10px !important;
+    border-radius: 7px !important;
 
     font-family: "Poppins", sans-serif !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 600 !important;
-    line-height: 1.2 !important;
+    line-height: 1.1 !important;
 
     white-space: nowrap !important;
   }
 }
 
+        .nav-logout-icon {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .topbar {
+            min-height: 66px !important;
+            height: 66px !important;
+            padding: 7px 11px !important;
+            gap: 8px !important;
+          }
+
+          .nav {
+            position: fixed !important;
+            top: 66px !important;
+            left: 10px !important;
+            right: 10px !important;
+            display: none !important;
+            flex-direction: column !important;
+            height: auto !important;
+            width: auto !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            align-items: stretch !important;
+            gap: 5px !important;
+            padding: 10px !important;
+            background: #ffffff !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 30px rgba(24, 45, 32, 0.14) !important;
+            overflow: visible !important;
+            z-index: 1200 !important;
+          }
+
+          .nav.mobile-nav-open {
+            display: flex !important;
+            height: auto !important;
+            bottom: auto !important;
+            justify-content: flex-start !important;
+          }
+
+          .nav > a {
+            width: 100% !important;
+            min-height: 42px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 10px 12px !important;
+            border-radius: 9px !important;
+          }
+
+          .nav .profile-wrapper {
+            display: flex !important;
+            width: 100% !important;
+            margin-left: 0 !important;
+          }
+
+          .nav .profile-button {
+            width: 100% !important;
+            min-width: 0 !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            justify-content: flex-start !important;
+            padding: 6px 12px !important;
+            border-radius: 9px !important;
+          }
+
+          .nav .profile-info {
+            display: flex !important;
+          }
+
+          .nav .profile-popup {
+            position: fixed !important;
+            top: 61px !important;
+            right: 10px !important;
+            width: min(298px, calc(100vw - 20px)) !important;
+          }
+
+          .nav .nav-logout {
+            display: flex !important;
+            width: 100% !important;
+            min-height: 42px !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 10px 12px !important;
+            border-radius: 9px !important;
+          }
+
+          .mobile-menu-wrapper {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex: 0 0 auto !important;
+          }
+
+          .mobile-menu-button {
+            width: 42px !important;
+            height: 42px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            padding: 0 !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 10px !important;
+            background: #ffffff !important;
+          }
+
+          .mobile-menu-button span {
+            display: block !important;
+            width: 20px !important;
+            height: 2px !important;
+            background: #087f3f !important;
+            border-radius: 999px !important;
+          }
+
+          .mobile-menu-button-open span:nth-child(1) {
+            transform: translateY(7px) rotate(45deg) !important;
+          }
+
+          .mobile-menu-button-open span:nth-child(2) {
+            opacity: 0 !important;
+          }
+
+          .mobile-menu-button-open span:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg) !important;
+          }
+
+          .nav .nav-logout {
+            display: none !important;
+          }
+
+          /* Match the compact mobile navbar used by Data Temuan. */
+          .shell .nav .nav-logout {
+            display: none !important;
+          }
+
+          .shell .nav .profile-wrapper {
+            width: auto !important;
+            flex: 0 0 auto !important;
+          }
+
+          .shell .nav .profile-button {
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0 !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+
+          .shell .nav .profile-info,
+          .shell .nav .profile-chevron {
+            display: none !important;
+          }
+
+          .shell .nav .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            flex-basis: 28px !important;
+          }
+
+          .shell .nav .profile-popup {
+            position: fixed !important;
+            top: 61px !important;
+            right: 10px !important;
+            width: min(298px, calc(100vw - 20px)) !important;
+            padding: 16px !important;
+          }
+
+          .shell .nav .profile-logout {
+            width: 100% !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+          }
+
+          .shell .nav .profile-logout svg {
+            width: 16px !important;
+            height: 16px !important;
+            flex: 0 0 16px !important;
+          }
+
+          .nav .profile-wrapper {
+            width: auto !important;
+            flex: 0 0 auto !important;
+          }
+
+          .nav .profile-button {
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0 !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+
+          .nav .profile-info,
+          .nav .profile-chevron {
+            display: none !important;
+          }
+
+          .nav .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            flex-basis: 28px !important;
+          }
+
+          .nav .nav-logout {
+            display: none !important;
+          }
+
+          .shell .nav > a.nav-page {
+            font-family: "Poppins", sans-serif !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            line-height: 1.2 !important;
+          }
+
+          .shell .nav > a.nav-users-button {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 27px !important;
+            height: 27px !important;
+            flex: 0 0 27px !important;
+            padding: 0 10px !important;
+            gap: 5px !important;
+            border-radius: 7px !important;
+            font-family: "Poppins", sans-serif !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            line-height: 1.1 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+          }
+        }
       `}</style>
 
     </main>

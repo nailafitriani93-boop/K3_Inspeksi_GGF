@@ -52,9 +52,9 @@ export async function GET(req) {
 
     const rows = await prisma.$queryRawUnsafe(`
       SELECT
-        g.nama_grup,
+        COALESCE(g.nama_grup, 'Tanpa Grup') AS nama_grup,
 
-        COUNT(t.*)::int AS jumlah,
+        COUNT(*)::int AS jumlah,
 
         COUNT(t.*) FILTER (
           WHERE t.status_temuan = 'OPEN'
@@ -65,15 +65,19 @@ export async function GET(req) {
             t.status_temuan = 'CLOSE'
         )::int AS close,
 
-        COUNT(t.*) FILTER (
+        COUNT(*) FILTER (
           WHERE
-            t.status_temuan = 'OPEN'
-            AND (CURRENT_DATE - t.tanggal_temuan) > 7
-        )::int AS overdue
+            (CURRENT_DATE - t.tanggal_temuan) > 7
+        )::int AS overdue,
+
+        COUNT(*) FILTER (
+          WHERE
+            (CURRENT_DATE - t.tanggal_temuan) > 7
+        )::int AS terlambat
 
       FROM public.temuan_k3 t
 
-      JOIN public.master_grup_temuan g
+      LEFT JOIN public.master_grup_temuan g
         ON g.id_grup = t.id_grup
 
       ${w}

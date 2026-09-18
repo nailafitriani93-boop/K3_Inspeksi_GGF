@@ -181,12 +181,26 @@ function getGroupWarning(row) {
 }
 
 function getWilayahName(row) {
-  return (
+  const rawName =
     row?.nama_wilayah ||
     (row?.no_wilayah
       ? `Wilayah ${row.no_wilayah}`
-      : "-")
-  );
+      : "-");
+
+  if (typeof rawName !== "string") {
+    return rawName;
+  }
+
+  const normalized = rawName.trim();
+
+  if (
+    normalized.toLowerCase() === "mixer" ||
+    normalized.toLowerCase() === "mixing"
+  ) {
+    return "Mixing";
+  }
+
+  return normalized;
 }
 
 function BadgeDeadline({ sisaHari, overdue }) {
@@ -427,6 +441,7 @@ function getStoredUser() {
 
   const possibleKeys = [
     "user",
+    "k3_user",
     "authUser",
     "currentUser",
     "loginUser",
@@ -491,6 +506,12 @@ function getUserRole(user) {
   );
 }
 
+function normalizedRole(user) {
+  return String(getUserRole(user) || "")
+    .trim()
+    .toUpperCase();
+}
+
 function getInitial(name) {
   const cleanName = String(name || "").trim();
 
@@ -547,22 +568,106 @@ export default function Dashboard() {
   const [profileOpen, setProfileOpen] =
     useState(false);
 
+  const [loggingOut, setLoggingOut] =
+    useState(false);
+
   const [showMobileNav, setShowMobileNav] =
     useState(false);
 
-  const [user, setUser] = useState({
-    nama_lengkap: "Haris",
-    role: "Mandor",
-  });
+  const [user, setUser] = useState(null);
+  const [accessNotice, setAccessNotice] = useState(false);
 
   const profileRef = useRef(null);
 
   useEffect(() => {
-    const storedUser = getStoredUser();
+    let dismissTimer;
 
-    if (storedUser) {
-      setUser(storedUser);
+    function showAccessNotice() {
+      const url = new URL(window.location.href);
+      const deniedByRedirect = url.searchParams.get("access") === "denied";
+      const deniedByCookie = document.cookie
+        .split("; ")
+        .includes("k3_access_denied=1");
+
+      if (!deniedByRedirect && !deniedByCookie) return;
+
+      setAccessNotice(true);
+      document.cookie = "k3_access_denied=; path=/; max-age=0; samesite=lax";
+      if (deniedByRedirect) {
+        url.searchParams.delete("access");
+        window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+      }
+      window.clearTimeout(dismissTimer);
+      dismissTimer = window.setTimeout(() => setAccessNotice(false), 3500);
     }
+
+    showAccessNotice();
+    const watcher = window.setInterval(showAccessNotice, 400);
+    return () => {
+      window.clearInterval(watcher);
+      window.clearTimeout(dismissTimer);
+    };
+  }, []);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+    } finally {
+      sessionStorage.removeItem("user");
+      localStorage.removeItem("user");
+      localStorage.removeItem("k3_user");
+      setUser(null);
+      setProfileOpen(false);
+      setLoggingOut(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    if (!sessionStorage.getItem("user")) {
+      fetch("/api/auth/logout", {
+        method: "POST",
+      }).finally(() => {
+        if (active) {
+          setUser(null);
+        }
+      });
+
+      return () => {
+        active = false;
+      };
+    }
+
+    fetch("/api/auth/me", {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const result = await response.json();
+
+        if (!active) {
+          return;
+        }
+
+        setUser(
+          response.ok && result.success
+            ? result.user
+            : null
+        );
+      })
+      .catch(() => {
+        if (active) {
+          setUser(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -952,8 +1057,7 @@ export default function Dashboard() {
         (a, b) =>
           getGroupTotal(b) -
           getGroupTotal(a)
-      )
-      .slice(0, 5);
+      );
   }, [groups]);
 
   const wilayahDisplay = useMemo(() => {
@@ -1210,10 +1314,37 @@ export default function Dashboard() {
 
   const fullName = getUserName(user);
   const role = getUserRole(user);
+  const roleCode = normalizedRole(user);
+  const isLoggedIn = Boolean(user?.username);
+  const canInspection = [
+    "ADMIN_DEVELOPER",
+    "ADMIN_SISTEM_MUTU",
+    "ADMIN",
+    "ADMIN_INSPECTOR",
+    "ADMIN_INSPEKSI",
+    "INSPECTOR",
+  ].includes(roleCode);
+  const canFindings = [
+    "ADMIN_DEVELOPER",
+    "TEAM_WILAYAH",
+    "PIC",
+    "ADMIN",
+    "ADMIN_INSPECTOR",
+    "ADMIN_INSPEKSI",
+    "INSPECTOR",
+  ].includes(roleCode);
+  const canUsers =
+    roleCode === "ADMIN_DEVELOPER" ||
+    Boolean(user?.kelola_user);
   const initial = getInitial(fullName);
 
   return (
     <main className="k3d-dashboard">
+      {accessNotice && (
+        <div className="k3d-access-notice" role="alert">
+          Anda tidak memiliki hak akses ke halaman ini.
+        </div>
+      )}
 
       {/* =====================================================
           HEADER / NAVBAR
@@ -1250,169 +1381,187 @@ export default function Dashboard() {
         </div>
 
           <nav
-        className={`nav ${showMobileNav ? "mobile-nav-open" : ""}`}
-  aria-label="Navigasi utama"
->
-
-  <Link
-    href="/inspeksi"
-    className="nav-page"
-  >
-    Form Inspeksi
-  </Link>
-
-  <Link
-    href="/dashboard"
-    className="nav-page active"
-  >
-    Dashboard
-  </Link>
-
-  <Link
-    href="/temuan"
-    className="nav-page"
-  >
-    Data Temuan
-  </Link>
-        <div
-          className="profile-wrapper"
-          ref={profileRef}
-        >
-          <button
-            type="button"
-            className={`profile-button ${
-              profileOpen
-                ? "profile-button-open"
-                : ""
-            }`}
-            onClick={() =>
-              setProfileOpen(
-                (previous) =>
-                  !previous
-              )
-            }
-            aria-label="Buka profil"
-            aria-expanded={profileOpen}
+            className={`nav ${isLoggedIn ? "nav-authenticated" : "nav-public"} ${showMobileNav ? "mobile-nav-open" : ""}`}
+            aria-label="Navigasi utama"
           >
-            <span className="profile-avatar">
-              {initial}
-            </span>
+            {isLoggedIn ? (
+              <>
+                <Link href="/dashboard" className="nav-page active">
+                  Dashboard
+                </Link>
 
-            <span className="profile-button-text">
-              <strong>
-                {fullName}
-              </strong>
+                <Link href="/temuan" className="nav-page">
+                  Data Temuan
+                </Link>
 
-              <small>
-                {role}
-              </small>
-            </span>
+                <Link href="/inspeksi" className="nav-page">
+                  Form Inspeksi
+                </Link>
 
-            <span className="profile-chevron">
-              <ChevronIcon />
-            </span>
-          </button>
+                <div className="profile-wrapper" ref={profileRef}>
+                  <button
+                    type="button"
+                    className={`profile-button ${profileOpen ? "profile-button-open" : ""}`}
+                    onClick={() => setProfileOpen((value) => !value)}
+                    aria-expanded={profileOpen}
+                  >
+                    <span className="profile-avatar">
+                      <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+                        <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
+                      </svg>
+                    </span>
 
-          {profileOpen && (
-            <div className="profile-popup">
-              <div className="profile-popup-head">
-                <div className="profile-popup-avatar">
-                  {initial}
+                    <span className="profile-info">
+                      <strong>{fullName}</strong>
+                      <small>{role}</small>
+                    </span>
+
+                    <span className="profile-chevron">▴</span>
+                  </button>
+
+                  {profileOpen && (
+                    <div className="profile-popup">
+                      <div className="profile-popup-header">
+                        <div className="profile-avatar">
+                          <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+                            <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
+                          </svg>
+                        </div>
+
+                        <div className="profile-header-info">
+                          <strong>{fullName}</strong>
+                          <span>{role}</span>
+                        </div>
+                      </div>
+
+                      <div className="profile-divider" />
+
+                      <div className="profile-detail">
+                        <span className="profile-label">Nama Lengkap</span>
+                        <strong>{fullName}</strong>
+                      </div>
+
+                      <div className="profile-detail">
+                        <span className="profile-label">Username</span>
+                        <strong>{user?.username || "-"}</strong>
+                      </div>
+
+                      <div className="profile-detail">
+                        <span className="profile-label">Role</span>
+                        <span className="role-badge">{role}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="profile-logout"
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
+                        </svg>
+                        {loggingOut ? "Memproses..." : "Logout"}
+                      </button>
+
+                    </div>
+                  )}
                 </div>
 
-                <div className="profile-popup-name">
-                  <strong>
-                    {fullName}
-                  </strong>
+                <button
+                  type="button"
+                  className="nav-logout"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                >
+                  <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
+                  </svg>
+                  <span className="nav-logout-label">{loggingOut ? "Memproses..." : "Logout"}</span>
+                </button>
 
-                  <span>
-                    {role}
-                  </span>
-                </div>
-              </div>
-
-              <div className="profile-divider" />
-
-              <div className="profile-detail">
-                <span>
-                  Nama Lengkap
+                {canUsers && (
+                  <Link href="/users" className="nav-users-button" onClick={() => setProfileOpen(false)}>
+                    <span className="dashboard-add-finding-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none">
+                        <path
+                          d="M12 3.5 19 6v5.1c0 4.4-2.8 7.8-7 9.4-4.2-1.6-7-5-7-9.4V6l7-2.5Z"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="m8.7 12.2 2.1 2.1 4.5-4.6"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    Kelola User
+                  </Link>
+                )}
+              </>
+            ) : (
+              <Link href="/login?next=/dashboard" className="nav-login" aria-label="Login ke akun">
+                <span className="nav-login-avatar" aria-hidden="true">
+                  <svg
+                    className="nav-login-icon"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M12 12.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Zm-6.5 7.3c.9-2.5 3.4-4 6.5-4s5.6 1.5 6.5 4"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <svg className="nav-login-door-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                    <path d="M13 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    <path d="M11 12h9m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </span>
+                <span className="nav-login-label">Login</span>
+              </Link>
+            )}
+          </nav>
 
-                <strong>
-                  {fullName}
-                </strong>
-              </div>
-
-              <div className="profile-detail">
-                <span>
-                  Username
-                </span>
-
-                <strong>
-                  {user?.username || "-"}
-                </strong>
-              </div>
-
-              <div className="profile-detail">
-                <span>
-                  Role
-                </span>
-
-                <strong className="role-badge">
-                  {role}
-                </strong>
-              </div>
-
-              <div className="profile-divider" />
-
-              <button
-                type="button"
-                className="popup-logout"
-                onClick={() => {
-                  setProfileOpen(false);
-                  window.location.href = "/login";
-                }}
-              >
-                <span className="logout-icon">
-                  ⇥
-                </span>
-
-                <span>
-                  Logout
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        <button
-          type="button"
-          className="nav-logout"
-          onClick={() => {
-            window.location.href = "/login";
-          }}
-        >
-          Logout
-        </button>
-      </nav>
-
-      <div className="mobile-menu-wrapper">
-        <button
-          type="button"
-          className={`mobile-menu-button ${showMobileNav ? "mobile-menu-button-open" : ""}`}
-          onClick={() => setShowMobileNav((value) => !value)}
-          aria-label={showMobileNav ? "Tutup menu navigasi" : "Buka menu navigasi"}
-          aria-expanded={showMobileNav}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
+          <div className="mobile-menu-wrapper">
+            <button
+              type="button"
+              className={`mobile-menu-button ${showMobileNav ? "mobile-menu-button-open" : ""}`}
+              onClick={() => setShowMobileNav((value) => !value)}
+              aria-label={showMobileNav ? "Tutup menu navigasi" : "Buka menu navigasi"}
+              aria-expanded={showMobileNav}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+          </div>
 
       </header>
 
       <section className="k3d-content">
+
+        {isLoggedIn && canInspection && (
+          <div className="k3d-dashboard-add-finding-row">
+            <Link
+              href="/inspeksi"
+              className="dashboard-add-finding"
+            >
+              + Tambah Temuan
+            </Link>
+          </div>
+        )}
 
         {err && (
           <div className="k3d-error">
@@ -1924,7 +2073,7 @@ export default function Dashboard() {
                     </th>
 
                     <th>
-                      Open (0-7 hari)
+                      Open
                     </th>
 
                     <th>
@@ -1932,7 +2081,7 @@ export default function Dashboard() {
                     </th>
 
                     <th>
-                      Warning (&gt; 7 hari close)
+                      Terlambat
                     </th>
 
                   </tr>
@@ -2109,14 +2258,13 @@ export default function Dashboard() {
 
   {wilayahDisplay
     .filter((item) => {
-
       const namaWilayah =
         getWilayahName(item);
 
       return (
         String(namaWilayah)
           .trim()
-          .toLowerCase() !== "mixer"
+          .length > 0
       );
     })
     .map((item, index) => {
@@ -2643,26 +2791,6 @@ export default function Dashboard() {
 
       </section>
 
-      <div className="k3d-dashboard-bottom-navigation">
-        <Link
-          href="/inspeksi"
-          className="k3d-dashboard-back-button"
-          aria-label="Kembali ke Form Inspeksi"
-          title="Kembali"
-        >
-          ← Kembali
-        </Link>
-
-        <Link
-          href="/temuan"
-          className="k3d-dashboard-next-button"
-          aria-label="Lanjut ke Data Temuan"
-          title="Data Temuan"
-        >
-          Data Temuan →
-        </Link>
-      </div>
-
       <footer className="k3d-footer">
 
         <span className="k3d-footer-pineapple"></span>
@@ -2674,10 +2802,24 @@ export default function Dashboard() {
       </footer>
 
       <style jsx global>{`
-
-      @import url(
+        @import url(
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap'
 );
+
+        .k3d-access-notice {
+          position: fixed;
+          right: 24px;
+          bottom: 24px;
+          z-index: 100000;
+          max-width: calc(100vw - 32px);
+          padding: 12px 16px;
+          border: 1px solid #f1c3a8;
+          border-radius: 10px;
+          background: #fffaf5;
+          box-shadow: 0 12px 28px rgba(83, 58, 30, .16);
+          color: #9a4c19;
+          font: 600 12px "Poppins", sans-serif;
+        }
 
         .k3d-dashboard .topbar {
           position: fixed !important;
@@ -2762,10 +2904,13 @@ export default function Dashboard() {
           justify-content: flex-end;
           gap: 5px !important;
           flex-shrink: 0 !important;
+          font-family: "Poppins", sans-serif;
+          font-weight: 600;
         }
 
         .k3d-dashboard .nav a,
         .k3d-dashboard .nav-maintenance,
+        .k3d-dashboard .nav-login,
         .k3d-dashboard .nav-logout {
           position: relative;
           display: inline-flex;
@@ -2776,8 +2921,9 @@ export default function Dashboard() {
           color: #34453a;
           padding: 10px 14px;
           border-radius: 10px;
-          font-size: 13px;
-          font-weight: 700;
+          font-family: "Poppins", sans-serif;
+          font-size: 12px;
+          font-weight: 600;
           transition:
             color 0.18s ease,
             background 0.18s ease,
@@ -2785,10 +2931,40 @@ export default function Dashboard() {
         }
 
         .k3d-dashboard .nav a:hover,
-        .k3d-dashboard .nav-maintenance:hover {
+        .k3d-dashboard .nav-maintenance:hover,
+        .k3d-dashboard .nav-login:hover {
           color: #08783d;
           background: #f0f7f2;
           transform: translateY(-1px);
+        }
+
+        .k3d-dashboard .k3d-dashboard-add-finding-row {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 8px;
+        }
+
+        .k3d-dashboard .dashboard-add-finding {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px !important;
+          padding: 5px 8px !important;
+          min-height: 0 !important;
+          height: auto !important;
+          border-radius: 5px !important;
+          border: 1px solid #08783d;
+          color: #08783d;
+          background: #edf7f0;
+          font-size: 9px !important;
+          font-weight: 700;
+          line-height: 1 !important;
+          text-decoration: none;
+        }
+
+        .k3d-dashboard .dashboard-add-finding:hover {
+          color: #ffffff;
+          background: #08783d;
         }
 
         .k3d-dashboard .nav a.active {
@@ -2820,6 +2996,149 @@ export default function Dashboard() {
           background: #ffe9e9;
           border-color: #efcccc;
           transform: translateY(-1px);
+        }
+
+        .k3d-dashboard .nav-users-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 30px;
+          padding: 5px 9px;
+          border: 1px solid #08783d;
+          border-radius: 7px;
+          background: #08783d;
+          color: #ffffff;
+          text-decoration: none;
+          font-family: "Poppins", sans-serif;
+          font-size: 10px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .k3d-dashboard .nav-users-button:hover {
+          background: #066531;
+          border-color: #066531;
+          color: #ffffff;
+        }
+
+        .k3d-dashboard .nav-login {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 40px;
+          padding: 8px 14px;
+          border: 1px solid #08783d;
+          color: #ffffff;
+          background: linear-gradient(135deg, #0b7f3d, #0f914b);
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.1;
+          border-radius: 999px;
+          box-shadow: 0 8px 18px rgba(8, 120, 61, 0.18);
+        }
+
+        .k3d-dashboard .nav-login:hover {
+          color: #ffffff;
+          background: linear-gradient(135deg, #066531, #0d7f42);
+          border-color: #066531;
+          transform: translateY(-1px);
+        }
+
+        .k3d-dashboard .nav-login-avatar {
+          width: 22px;
+          height: 22px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.16);
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          flex-shrink: 0;
+        }
+
+        .k3d-dashboard .nav-login-icon {
+          flex: 0 0 auto;
+          display: block;
+          width: 12px;
+          height: 12px;
+        }
+
+        .k3d-dashboard .nav-login-label {
+          display: inline-block;
+          white-space: nowrap;
+        }
+
+        .k3d-dashboard .nav > .nav-login {
+          gap: 8px !important;
+          padding: 8px 14px !important;
+          min-height: 40px !important;
+          height: auto !important;
+          color: #ffffff !important;
+          font-size: 12px !important;
+          line-height: 1.1 !important;
+          border-radius: 999px !important;
+        }
+
+        .k3d-dashboard .nav > .nav-login .nav-login-icon {
+          width: 12px !important;
+          height: 12px !important;
+        }
+
+        .k3d-dashboard .k3d-admin-access {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 22px;
+          padding: 18px 20px;
+          border: 1px solid #d9e8dc;
+          border-radius: 12px;
+          background: #f7fbf8;
+        }
+
+        .k3d-dashboard .k3d-admin-access > div {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .k3d-dashboard .k3d-admin-access strong {
+          color: #142119;
+          font-size: 16px;
+        }
+
+        .k3d-dashboard .k3d-admin-access span {
+          color: #66746b;
+          font-size: 13px;
+        }
+
+        .k3d-dashboard .k3d-admin-access-button {
+          flex: 0 0 auto;
+          padding: 10px 14px;
+          border-radius: 10px;
+          background: #08783d;
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+          text-decoration: none;
+        }
+
+        .k3d-dashboard .k3d-admin-access-button:hover {
+          background: #066531;
+        }
+
+        @media (max-width: 640px) {
+          .k3d-dashboard .k3d-admin-access {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .k3d-dashboard .k3d-admin-access-button {
+            text-align: center;
+          }
         }
 
         .k3d-dashboard .profile-container {
@@ -2873,7 +3192,13 @@ export default function Dashboard() {
           box-shadow: 0 2px 8px rgba(8, 120, 61, 0.22);
         }
 
-        .k3d-dashboard .profile-button-text {
+        .k3d-dashboard .profile-symbol {
+          width: 18px;
+          height: 18px;
+          display: block;
+        }
+
+        .k3d-dashboard .profile-info {
           display: flex;
           flex-direction: column;
           align-items: flex-start;
@@ -2883,7 +3208,7 @@ export default function Dashboard() {
           overflow: hidden;
         }
 
-        .k3d-dashboard .profile-button-text strong {
+        .k3d-dashboard .profile-info strong {
           color: #18251d;
           font-size: 11px;
           line-height: 1.2;
@@ -2894,7 +3219,7 @@ export default function Dashboard() {
           max-width: 130px;
         }
 
-        .k3d-dashboard .profile-button-text small {
+        .k3d-dashboard .profile-info small {
           color: #7b877f;
           font-size: 9px;
           line-height: 1.2;
@@ -2936,6 +3261,53 @@ export default function Dashboard() {
   animation: k3dProfilePopupIn 0.14s ease-out;
 }
 
+        .k3d-dashboard .profile-menu-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .k3d-dashboard .profile-menu-link {
+          display: inline-flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          min-height: 36px;
+          padding: 9px 12px;
+          border: 1px solid #e3e9e4;
+          border-radius: 10px;
+          background: #f7faf8;
+          color: #23352d;
+          text-decoration: none;
+          font-family: "Poppins", sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .k3d-dashboard .profile-menu-link:hover {
+          background: #edf7f0;
+          border-color: #cfe3d3;
+        }
+
+        .k3d-dashboard .profile-menu-link-static {
+          appearance: none;
+          -webkit-appearance: none;
+        }
+
+        .k3d-dashboard .profile-menu-link-small {
+          min-height: 30px;
+          padding: 7px 10px;
+          font-size: 11px;
+          background: #ffffff;
+          border-color: #d9e5dc;
+          color: #2a3d31;
+          width: auto;
+          align-self: flex-end;
+          min-width: 118px;
+        }
+
 @keyframes k3dProfilePopupIn {
   from {
     opacity: 0;
@@ -2948,7 +3320,7 @@ export default function Dashboard() {
   }
 }
 
-.k3d-dashboard .profile-popup-head {
+.k3d-dashboard .profile-popup-header {
   display: flex;
   align-items: center;
 
@@ -2957,7 +3329,7 @@ export default function Dashboard() {
   padding: 1px 0 3px;
 }
 
-.k3d-dashboard .profile-popup-avatar {
+.k3d-dashboard .profile-popup-header > .profile-avatar {
   width: 43px;
   height: 43px;
 
@@ -2977,7 +3349,7 @@ export default function Dashboard() {
   font-weight: 600;
 }
 
-.k3d-dashboard .profile-popup-name {
+.k3d-dashboard .profile-header-info {
   display: flex;
   flex-direction: column;
 
@@ -2986,7 +3358,7 @@ export default function Dashboard() {
   min-width: 0;
 }
 
-.k3d-dashboard .profile-popup-name strong {
+.k3d-dashboard .profile-header-info strong {
   color: #26382d;
 
   font-family: "Poppins", sans-serif;
@@ -2994,7 +3366,7 @@ export default function Dashboard() {
   font-weight: 600;
 }
 
-.k3d-dashboard .profile-popup-name span {
+.k3d-dashboard .profile-header-info span {
   color: #7b8980;
 
   font-family: "Poppins", sans-serif;
@@ -3211,7 +3583,7 @@ export default function Dashboard() {
             padding: 8px 20px;
           }
 
-          .k3d-dashboard .profile-button-text {
+          .k3d-dashboard .profile-info {
             display: none;
           }
 
@@ -3244,13 +3616,13 @@ export default function Dashboard() {
           }
 
           .k3d-dashboard .logo {
-            width: 82px !important;
-            height: 40px !important;
-            flex-basis: 82px !important;
+            width: 64px !important;
+            height: 32px !important;
+            flex-basis: 64px !important;
           }
 
           .k3d-dashboard .logo img {
-            max-width: 82px !important;
+            max-width: 64px !important;
           }
 
           .k3d-dashboard .brand-text {
@@ -3363,13 +3735,13 @@ export default function Dashboard() {
           }
 
           .k3d-dashboard .logo {
-            width: 82px !important;
-            height: 39px !important;
-            flex-basis: 82px !important;
+            width: 60px !important;
+            height: 30px !important;
+            flex-basis: 60px !important;
           }
 
           .k3d-dashboard .logo img {
-            max-width: 82px !important;
+            max-width: 60px !important;
           }
 
           .k3d-dashboard .nav {
@@ -3445,6 +3817,40 @@ export default function Dashboard() {
 
         }
 
+        /* Final mobile navbar match with Data Temuan. */
+        @media (max-width: 768px) {
+          .k3d-dashboard .nav .profile-wrapper {
+            width: auto !important;
+            flex: 0 0 auto !important;
+          }
+
+          .k3d-dashboard .nav .profile-button {
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0 !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+
+          .k3d-dashboard .nav .profile-info,
+          .k3d-dashboard .nav .profile-chevron {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            flex-basis: 28px !important;
+          }
+
+          .k3d-dashboard .nav .nav-logout {
+            display: none !important;
+          }
+        }
+
         @media (max-width: 390px) {
 
           .k3d-dashboard {
@@ -3452,13 +3858,13 @@ export default function Dashboard() {
           }
 
           .k3d-dashboard .logo {
-            width: 74px !important;
-            height: 36px !important;
-            flex-basis: 74px !important;
+            width: 56px !important;
+            height: 28px !important;
+            flex-basis: 56px !important;
           }
 
           .k3d-dashboard .logo img {
-            max-width: 74px !important;
+            max-width: 56px !important;
           }
 
           .k3d-dashboard .nav {
@@ -3470,7 +3876,7 @@ export default function Dashboard() {
           .k3d-dashboard .nav-login,
           .k3d-dashboard .nav-logout {
             padding: 6px 5px !important;
-            font-size: 8px !important;
+            font-size: 12px !important;
           }
 
           .k3d-dashboard .profile-button {
@@ -3490,6 +3896,240 @@ export default function Dashboard() {
             width: calc(100vw - 12px);
           }
 
+        }
+
+        /* Match the Data Temuan mobile navbar layout. */
+        @media (max-width: 768px) {
+          .k3d-dashboard .topbar {
+            min-height: 66px !important;
+            height: 66px !important;
+            padding: 7px 11px !important;
+            gap: 8px !important;
+          }
+
+          .k3d-dashboard .brand {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            max-width: calc(100% - 52px) !important;
+            gap: 0 !important;
+          }
+
+          .k3d-dashboard .logo {
+            width: 82px !important;
+            height: 40px !important;
+            min-width: 82px !important;
+            flex: 0 0 82px !important;
+          }
+
+          .k3d-dashboard .logo img {
+            width: 100% !important;
+            max-width: 82px !important;
+          }
+
+          .k3d-dashboard .brand-text {
+            display: flex !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            flex-direction: column !important;
+            gap: 2px !important;
+            line-height: 1.15 !important;
+          }
+
+          .k3d-dashboard .brand-text b {
+            font-size: 12px !important;
+            line-height: 1.15 !important;
+            white-space: nowrap !important;
+          }
+
+          .k3d-dashboard .brand-text span {
+            font-size: 8px !important;
+            line-height: 1.15 !important;
+            white-space: normal !important;
+          }
+
+          .k3d-dashboard .nav {
+            position: fixed !important;
+            top: 66px !important;
+            left: 10px !important;
+            right: 10px !important;
+            display: none !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            justify-content: flex-start !important;
+            width: auto !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            height: auto !important;
+            gap: 5px !important;
+            padding: 10px !important;
+            background: #ffffff !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 30px rgba(24, 45, 32, 0.14) !important;
+            overflow: visible !important;
+            z-index: 1200 !important;
+          }
+
+          .k3d-dashboard .nav:not(.mobile-nav-open) {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav.mobile-nav-open {
+            display: flex !important;
+          }
+
+          .k3d-dashboard .nav > a {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            min-height: 42px !important;
+            height: 42px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            flex: 0 0 42px !important;
+            align-self: stretch !important;
+            box-sizing: border-box !important;
+            padding: 10px 12px !important;
+            border-radius: 9px !important;
+            text-align: left !important;
+          }
+
+          .k3d-dashboard .nav > a:global(.nav-users-button) {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 27px !important;
+            height: 27px !important;
+            flex: 0 0 27px !important;
+            padding: 0 10px !important;
+            gap: 5px !important;
+            border: 1px solid #16833f !important;
+            border-radius: 7px !important;
+            background: #16833f !important;
+            color: #ffffff !important;
+            font-family: "Poppins", sans-serif !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            line-height: 1.1 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+          }
+
+          .k3d-dashboard .nav :global(.profile-popup) {
+            position: fixed !important;
+            top: 61px !important;
+            right: 10px !important;
+            width: min(298px, calc(100vw - 20px)) !important;
+            max-width: calc(100vw - 20px) !important;
+          }
+
+          .k3d-dashboard .nav .profile-wrapper {
+            display: flex !important;
+            width: auto !important;
+            flex: 0 0 auto !important;
+            margin-left: 0 !important;
+          }
+
+          .k3d-dashboard .nav .profile-button {
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0 !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+
+          .k3d-dashboard .nav .profile-info,
+          .k3d-dashboard .nav .profile-chevron,
+          .k3d-dashboard .nav .nav-logout {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            flex-basis: 28px !important;
+          }
+
+          :global(.k3d-dashboard .nav > a.nav-users-button) {
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 27px !important;
+            height: 27px !important;
+            flex: 0 0 27px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 10px !important;
+            gap: 5px !important;
+            border-radius: 7px !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            line-height: 1.1 !important;
+            text-align: center !important;
+          }
+
+          :global(.k3d-dashboard .nav .profile-popup) {
+            position: fixed !important;
+            top: 61px !important;
+            right: 10px !important;
+            width: min(298px, calc(100vw - 20px)) !important;
+            max-width: calc(100vw - 20px) !important;
+          }
+
+          .k3d-dashboard .mobile-menu-wrapper {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex: 0 0 auto !important;
+          }
+
+          .k3d-dashboard .mobile-menu-button {
+            width: 42px !important;
+            height: 42px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            padding: 0 !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 10px !important;
+            background: #ffffff !important;
+          }
+
+          .k3d-dashboard .mobile-menu-button span {
+            display: block !important;
+            width: 20px !important;
+            height: 2px !important;
+            background: #087f3f !important;
+            border-radius: 999px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .k3d-dashboard .topbar {
+            min-height: 60px !important;
+            height: 60px !important;
+            padding: 7px 8px !important;
+            gap: 5px !important;
+          }
+
+          .k3d-dashboard .nav {
+            top: 60px !important;
+            left: 10px !important;
+            right: 10px !important;
+            max-width: none !important;
+            gap: 3px !important;
+          }
+
+          .k3d-dashboard .brand {
+            max-width: calc(100% - 52px) !important;
+          }
         }
 
         /* =====================================================
@@ -3967,10 +4607,10 @@ export default function Dashboard() {
   }
 
   .k3d-dashboard .logo {
-    width: 110px !important;
-    height: 52px !important;
+    width: 82px !important;
+    height: 40px !important;
 
-    flex: 0 0 110px !important;
+    flex: 0 0 82px !important;
 
     display: flex !important;
     align-items: center !important;
@@ -3984,7 +4624,7 @@ export default function Dashboard() {
     display: block !important;
 
     width: 100% !important;
-    max-width: 110px !important;
+    max-width: 82px !important;
     height: auto !important;
 
     object-fit: contain !important;
@@ -4148,7 +4788,7 @@ export default function Dashboard() {
     box-shadow: none !important;
   }
 
-  .k3d-dashboard .profile-button-text {
+  .k3d-dashboard .profile-info {
     min-width: 0 !important;
 
     flex: 1 1 auto !important;
@@ -4162,7 +4802,7 @@ export default function Dashboard() {
     overflow: hidden !important;
   }
 
-  .k3d-dashboard .profile-button-text strong {
+  .k3d-dashboard .profile-info strong {
     overflow: hidden !important;
 
     color: #25362c !important;
@@ -4177,7 +4817,7 @@ export default function Dashboard() {
     white-space: nowrap !important;
   }
 
-  .k3d-dashboard .profile-button-text small {
+  .k3d-dashboard .profile-info small {
     margin-top: 4px !important;
 
     color: #7c8981 !important;
@@ -4205,18 +4845,18 @@ export default function Dashboard() {
   }
 
   .k3d-dashboard .nav-logout {
-    min-height: 42px !important;
+    min-height: 30px !important;
 
     border: 1px solid #d9e3dc !important;
-    border-radius: 10px !important;
+    border-radius: 7px !important;
 
-    padding: 10px 15px !important;
+    padding: 5px 9px !important;
 
     background: #ffffff !important;
     color: #304037 !important;
 
     font-family: "Poppins", sans-serif !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 600 !important;
 
     white-space: nowrap !important;
@@ -4231,6 +4871,49 @@ export default function Dashboard() {
     border-color: #cbd8cf !important;
 
     transform: none !important;
+  }
+
+  .k3d-dashboard .nav-users-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 27px !important;
+    height: 27px !important;
+    padding: 0 10px !important;
+    gap: 5px !important;
+    border: 1px solid #16833f !important;
+    border-radius: 7px !important;
+    background: #16833f !important;
+    color: #ffffff !important;
+    font-family: "Poppins", sans-serif !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+  }
+
+  .k3d-dashboard .nav-users-button:hover {
+    background: #117236 !important;
+    border-color: #117236 !important;
+    color: #ffffff !important;
+  }
+
+  .k3d-dashboard .nav-logout {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 5px 9px !important;
+    border-radius: 7px !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
   }
 
   .k3d-dashboard {
@@ -4550,37 +5233,29 @@ export default function Dashboard() {
           }
 
           .k3d-dashboard .nav {
-            position: fixed !important;
-            top: 66px !important;
-            left: 10px !important;
-            right: 10px !important;
-            display: none !important;
-            flex-direction: column !important;
-            width: auto !important;
-            max-width: none !important;
-            min-width: 0 !important;
-            align-items: stretch !important;
-            gap: 5px !important;
-            padding: 10px !important;
-            background: #ffffff !important;
-            border: 1px solid #dfe7e1 !important;
-            border-radius: 14px !important;
-            box-shadow: 0 12px 30px rgba(24, 45, 32, 0.14) !important;
-            overflow: visible !important;
-            z-index: 1200 !important;
-          }
-
-          .k3d-dashboard .nav.mobile-nav-open {
+            position: static !important;
             display: flex !important;
+            flex-direction: row !important;
+            width: auto !important;
+            max-width: 46vw !important;
+            min-width: 0 !important;
+            align-items: center !important;
+            gap: 4px !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
           }
 
           .k3d-dashboard .nav a {
-            width: 100% !important;
-            min-height: 42px !important;
+            width: auto !important;
+            min-height: 0 !important;
             display: flex !important;
             align-items: center !important;
-            justify-content: flex-start !important;
-            padding: 10px 12px !important;
+            justify-content: center !important;
+            padding: 6px 8px !important;
             border-radius: 9px !important;
           }
 
@@ -4599,7 +5274,7 @@ export default function Dashboard() {
             border-radius: 9px !important;
           }
 
-          .k3d-dashboard .nav .profile-button-text {
+          .k3d-dashboard .nav .profile-info {
             display: flex !important;
           }
 
@@ -4653,6 +5328,384 @@ export default function Dashboard() {
 
           .k3d-dashboard .mobile-menu-button-open span:nth-child(3) {
             transform: translateY(-7px) rotate(-45deg) !important;
+          }
+
+          .k3d-dashboard .nav .nav-login {
+            gap: 2px !important;
+            padding: 2px 4px !important;
+            font-size: 7px !important;
+            line-height: 1 !important;
+            border-radius: 7px !important;
+          }
+
+          .k3d-dashboard .dashboard-add-finding {
+            padding: 4px 6px !important;
+            font-size: 8px !important;
+          }
+
+          .k3d-dashboard .nav .nav-login-icon {
+            width: 8px !important;
+            height: 8px !important;
+          }
+
+          .k3d-dashboard .nav.nav-public {
+            width: auto !important;
+            max-width: none !important;
+            flex: 0 0 auto !important;
+            overflow: visible !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login {
+            gap: 8px !important;
+            min-height: 40px !important;
+            padding: 8px 14px !important;
+            font-size: 12px !important;
+            line-height: 1.1 !important;
+            border-radius: 999px !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login-icon {
+            width: 12px !important;
+            height: 12px !important;
+          }
+        }
+        .k3d-dashboard .nav-logout-icon,
+        .k3d-dashboard .nav-login-door-icon {
+          display: none;
+        }
+
+        .k3d-dashboard .profile-logout {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .k3d-dashboard .nav {
+            position: fixed !important;
+            top: 66px !important;
+            left: 10px !important;
+            right: 10px !important;
+            display: none !important;
+            flex-direction: column !important;
+            width: auto !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            align-items: stretch !important;
+            gap: 5px !important;
+            padding: 10px !important;
+            background: #ffffff !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 30px rgba(24, 45, 32, 0.14) !important;
+            overflow: visible !important;
+            z-index: 1200 !important;
+          }
+
+          .k3d-dashboard .nav.mobile-nav-open {
+            display: flex !important;
+          }
+
+          .k3d-dashboard .nav > a {
+            width: 100% !important;
+            min-height: 42px !important;
+            justify-content: flex-start !important;
+            padding: 10px 12px !important;
+          }
+
+          .k3d-dashboard .nav .profile-popup {
+            position: fixed !important;
+            top: 61px !important;
+            right: 10px !important;
+            width: min(298px, calc(100vw - 20px)) !important;
+          }
+
+          .k3d-dashboard .profile-logout {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 7px !important;
+            width: 100% !important;
+            min-height: 34px !important;
+            border: 0 !important;
+            border-radius: 8px !important;
+            background: #fff5f5 !important;
+            color: #a12d2d !important;
+            font: 600 11px/1 "Poppins", sans-serif !important;
+            cursor: pointer !important;
+          }
+
+          .k3d-dashboard .profile-logout svg {
+            width: 16px !important;
+            height: 16px !important;
+          }
+
+          .k3d-dashboard .nav .nav-users-button {
+            width: 100% !important;
+            min-height: 42px !important;
+            justify-content: center !important;
+            padding: 10px 12px !important;
+          }
+
+          .k3d-dashboard .nav .nav-logout {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav .profile-wrapper {
+            width: auto !important;
+            flex: 0 0 auto !important;
+          }
+
+          .k3d-dashboard .nav .profile-button {
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0 !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+
+          .k3d-dashboard .nav .profile-info,
+          .k3d-dashboard .nav .profile-chevron {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            flex-basis: 28px !important;
+          }
+
+          .k3d-dashboard .nav .nav-logout {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login {
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 36px !important;
+            min-height: 36px !important;
+            padding: 0 !important;
+            gap: 0 !important;
+            border-radius: 9px !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login-avatar {
+            width: 22px !important;
+            height: 22px !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login-icon,
+          .k3d-dashboard .nav.nav-public .nav-login-label {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login-door-icon {
+            display: block !important;
+            width: 16px !important;
+            height: 16px !important;
+          }
+        }
+
+        /* Public Dashboard keeps the original single Login icon. */
+        @media (max-width: 768px) {
+          .k3d-dashboard .nav.nav-public {
+            position: static !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            display: flex !important;
+            flex-direction: row !important;
+            width: auto !important;
+            max-width: none !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+          }
+
+          .k3d-dashboard .nav.nav-public + .mobile-menu-wrapper {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login {
+            width: 42px !important;
+            min-width: 42px !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            padding: 0 !important;
+            border: 1px solid #dfe7e1 !important;
+            border-radius: 10px !important;
+            background: #ffffff !important;
+            color: #087f3f !important;
+            box-shadow: none !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login-avatar {
+            width: 100% !important;
+            height: 100% !important;
+            border: 0 !important;
+            background: transparent !important;
+          }
+
+          .k3d-dashboard .nav.nav-public .nav-login-door-icon {
+            color: #087f3f !important;
+          }
+        }
+
+        /* Match the authenticated mobile navbar used by Data Temuan. */
+        @media (max-width: 768px) {
+          .k3d-dashboard .nav.nav-authenticated .profile-wrapper {
+            width: auto !important;
+            flex: 0 0 auto !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated.mobile-nav-open {
+            position: fixed !important;
+            top: 66px !important;
+            left: 10px !important;
+            right: 10px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            justify-content: flex-start !important;
+            width: auto !important;
+            max-width: none !important;
+            max-height: calc(100vh - 78px) !important;
+            overflow-y: auto !important;
+            padding: 10px !important;
+            gap: 5px !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated.mobile-nav-open > a:not(.nav-users-button) {
+            display: flex !important;
+            width: 100% !important;
+            min-width: 100% !important;
+            min-height: 42px !important;
+            box-sizing: border-box !important;
+            justify-content: flex-start !important;
+            text-align: left !important;
+            padding: 10px 12px !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated.mobile-nav-open .profile-wrapper {
+            width: 100% !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated.mobile-nav-open .profile-button {
+            align-self: flex-start !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated.mobile-nav-open .profile-popup {
+            position: fixed !important;
+            top: 61px !important;
+            left: auto !important;
+            right: 10px !important;
+            width: min(298px, calc(100vw - 20px)) !important;
+            max-width: calc(100vw - 20px) !important;
+            max-height: calc(100vh - 73px) !important;
+            overflow-y: auto !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated .profile-button {
+            width: 38px !important;
+            min-width: 38px !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0 !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated .profile-info,
+          .k3d-dashboard .nav.nav-authenticated .profile-chevron {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated .profile-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            flex-basis: 28px !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated .nav-logout {
+            display: none !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated .nav-users-button {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 27px !important;
+            height: 27px !important;
+            flex: 0 0 27px !important;
+            padding: 0 10px !important;
+            border-radius: 7px !important;
+            gap: 5px !important;
+            font-family: "Poppins", sans-serif !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            line-height: 1.1 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .k3d-dashboard .nav.nav-authenticated.mobile-nav-open {
+            top: 60px !important;
+            left: 10px !important;
+            right: 10px !important;
+            width: auto !important;
+            max-width: 77vw !important;
+            gap: 3px !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated.mobile-nav-open > a {
+            min-height: 42px !important;
+            height: 42px !important;
+            padding: 10px 12px !important;
+            font-size: 12px !important;
+            line-height: 1.2 !important;
+          }
+
+          .k3d-dashboard .nav.nav-authenticated.mobile-nav-open .nav-users-button {
+            min-height: 27px !important;
+            height: 27px !important;
+            flex-basis: 27px !important;
+            padding: 0 10px !important;
+            font-size: 10px !important;
+            line-height: 1.1 !important;
+          }
+
+          :global(.k3d-dashboard .nav.nav-authenticated.mobile-nav-open > a.nav-page) {
+            font-size: 12px !important;
+            line-height: 1.2 !important;
+          }
+
+          :global(.k3d-dashboard .nav.nav-authenticated.mobile-nav-open > a.nav-users-button) {
+            font-size: 10px !important;
+            line-height: 1.1 !important;
+          }
+
+          .k3d-dashboard .topbar .logo {
+            width: 82px !important;
+            height: 39px !important;
+            min-width: 82px !important;
+            flex: 0 0 82px !important;
+          }
+
+          .k3d-dashboard .topbar .logo img {
+            width: 82px !important;
+            max-width: 82px !important;
+            height: 39px !important;
+            max-height: 39px !important;
+            object-fit: contain !important;
           }
         }
       `}</style>
