@@ -579,30 +579,52 @@ export default function Dashboard() {
 
   const profileRef = useRef(null);
 
-  useEffect(() => {
+   useEffect(() => {
     let dismissTimer;
 
     function showAccessNotice() {
       const url = new URL(window.location.href);
-      const deniedByRedirect = url.searchParams.get("access") === "denied";
+      const deniedByRedirect =
+        url.searchParams.get("access") === "denied";
+
       const deniedByCookie = document.cookie
         .split("; ")
         .includes("k3_access_denied=1");
 
-      if (!deniedByRedirect && !deniedByCookie) return;
+      if (!deniedByRedirect && !deniedByCookie) {
+        return;
+      }
 
       setAccessNotice(true);
-      document.cookie = "k3_access_denied=; path=/; max-age=0; samesite=lax";
+
+      document.cookie =
+        "k3_access_denied=; path=/; max-age=0; samesite=lax";
+
       if (deniedByRedirect) {
         url.searchParams.delete("access");
-        window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+
+        window.history.replaceState(
+          {},
+          "",
+          `${url.pathname}${url.search}${url.hash}`
+        );
       }
+
       window.clearTimeout(dismissTimer);
-      dismissTimer = window.setTimeout(() => setAccessNotice(false), 3500);
+
+      dismissTimer = window.setTimeout(
+        () => setAccessNotice(false),
+        3500
+      );
     }
 
     showAccessNotice();
-    const watcher = window.setInterval(showAccessNotice, 400);
+
+    const watcher = window.setInterval(
+      showAccessNotice,
+      400
+    );
+
     return () => {
       window.clearInterval(watcher);
       window.clearTimeout(dismissTimer);
