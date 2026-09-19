@@ -86,48 +86,6 @@ function permissionAllowed(pathname, user) {
   return true;
 }
 
-// =============================================================
-// AMBIL USER TERBARU DARI /api/auth/me
-// =============================================================
-async function getCurrentUser(request) {
-  try {
-    const url = new URL(
-      "/api/auth/me",
-      request.url
-    );
-
-    const response = await fetch(url, {
-      method: "GET",
-
-      headers: {
-        cookie:
-          request.headers.get("cookie") || "",
-      },
-
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (!data?.success || !data?.user) {
-      return null;
-    }
-
-    return data.user;
-  } catch (error) {
-    console.error(
-      "MIDDLEWARE AUTH ME ERROR:",
-      error
-    );
-
-    return null;
-  }
-}
-
 export async function middleware(request) {
   const pathname = request.nextUrl.pathname;
 
@@ -135,8 +93,6 @@ export async function middleware(request) {
   // HALAMAN / API YANG DILINDUNGI
   // =========================================================
   const isProtected =
-    pathname === "/dashboard" ||
-    pathname.startsWith("/dashboard/") ||
     pathname.startsWith("/inspeksi") ||
     pathname.startsWith("/temuan") ||
     pathname.startsWith("/users") ||
@@ -174,36 +130,12 @@ export async function middleware(request) {
   }
 
   // =========================================================
-  // PENTING:
-  // JANGAN LAGI MENGGUNAKAN PERMISSION DARI JWT.
-  //
-  // Ambil permission TERBARU dari database melalui /api/auth/me
-  // =========================================================
-  const currentUser =
-    await getCurrentUser(request);
-
-  if (!currentUser) {
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        {
-          error: "Session tidak valid.",
-        },
-        {
-          status: 401,
-        }
-      );
-    }
-
-    return redirectToLogin(request);
-  }
-
-  // =========================================================
-  // CEK HAK AKSES DARI DATA DATABASE TERBARU
+  // CEK HAK AKSES DARI SESSION JWT
   // =========================================================
   if (
     !permissionAllowed(
       pathname,
-      currentUser
+      session
     )
   ) {
     if (pathname.startsWith("/api/")) {
@@ -235,3 +167,5 @@ export const config = {
     "/api/users/:path*",
   ],
 };
+
+
