@@ -27,7 +27,6 @@ function serializeUser(row) {
     nama_lengkap: row.nama_lengkap,
     username: row.username,
     email: row.email || "",
-    no_hp: row.no_hp || "",
     role: row.role,
     aktif: Boolean(row.aktif),
 
@@ -53,7 +52,6 @@ export async function GET() {
         nama_lengkap,
         username,
         email,
-        no_hp,
         role,
         aktif,
         akses_dashboard,
@@ -102,9 +100,6 @@ export async function POST(request) {
 
     const email =
       String(body?.email || "").trim() || null;
-
-    const noHp =
-      String(body?.no_hp || "").trim() || null;
 
     const password = String(
       body?.password || ""
@@ -188,7 +183,6 @@ export async function POST(request) {
           nama_lengkap,
           username,
           email,
-          no_hp,
           password,
           role,
           aktif,
@@ -202,7 +196,6 @@ export async function POST(request) {
           ${nama},
           ${username},
           ${email},
-          ${noHp},
           ${passwordHash},
           ${role},
           ${aktif},
@@ -216,7 +209,6 @@ export async function POST(request) {
         nama_lengkap,
         username,
         email,
-        no_hp,
         role,
         aktif,
         akses_dashboard,
@@ -287,9 +279,6 @@ export async function PATCH(request) {
 
     const email =
       String(body?.email || "").trim() || null;
-
-    const noHp =
-      String(body?.no_hp || "").trim() || null;
 
     const role = String(
       body?.role || "INSPECTOR"
@@ -367,7 +356,6 @@ export async function PATCH(request) {
             nama_lengkap = ${nama},
             username = ${username},
             email = ${email},
-            no_hp = ${noHp},
             role = ${role},
             aktif = ${aktif},
             akses_dashboard = ${aksesDashboard},
@@ -381,7 +369,6 @@ export async function PATCH(request) {
             nama_lengkap,
             username,
             email,
-            no_hp,
             role,
             aktif,
             akses_dashboard,
@@ -395,7 +382,6 @@ export async function PATCH(request) {
             nama_lengkap = ${nama},
             username = ${username},
             email = ${email},
-            no_hp = ${noHp},
             role = ${role},
             aktif = ${aktif},
             akses_dashboard = ${aksesDashboard},
@@ -408,7 +394,6 @@ export async function PATCH(request) {
             nama_lengkap,
             username,
             email,
-            no_hp,
             role,
             aktif,
             akses_dashboard,
