@@ -168,7 +168,7 @@ export default function UsersPage() {
           setCurrentUser(result.user);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -318,9 +318,8 @@ export default function UsersPage() {
         </div>
 
         <nav
-          className={`users-nav ${
-            showMobileNav ? "mobile-nav-open" : ""
-          }`}
+          className={`users-nav ${showMobileNav ? "mobile-nav-open" : ""
+            }`}
           aria-label="Navigasi utama"
         >
           <Link
@@ -375,9 +374,23 @@ export default function UsersPage() {
 
               <span className="users-profile-text">
                 <strong>{fullName}</strong>
-                <small>{role}</small>
-              </span>
 
+                <small
+                  className={
+                    role === "ADMIN_DEVELOPER"
+                      ? "users-role-admin-developer"
+                      : ""
+                  }
+                >
+                  {role === "ADMIN_DEVELOPER" && (
+                    <span className="users-role-active-dot" />
+                  )}
+
+                  {role === "ADMIN_DEVELOPER"
+                    ? "ADMIN DEVELOPER"
+                    : role}
+                </small>
+              </span>
               <span className="users-profile-chevron">
                 ▴
               </span>
@@ -426,23 +439,18 @@ export default function UsersPage() {
 
                 <div className="users-profile-detail">
                   <small>Role</small>
-                  <span className="users-role-badge">
-                    {role}
+                  <span
+                    className={`users-role-badge ${role === "ADMIN_DEVELOPER"
+                      ? "users-role-admin-developer"
+                      : ""
+                      }`}
+                  >
+                    {role === "ADMIN_DEVELOPER"
+                      ? "ADMIN DEVELOPER"
+                      : role}
                   </span>
                 </div>
-
                 <div className="users-profile-divider" />
-
-                <button
-                  type="button"
-                  className="users-profile-logout"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                >
-                  {loggingOut
-                    ? "Memproses..."
-                    : "Logout"}
-                </button>
               </div>
             )}
           </div>
@@ -495,11 +503,10 @@ export default function UsersPage() {
         <div className="users-mobile-menu-wrapper">
           <button
             type="button"
-            className={`users-mobile-menu-button ${
-              showMobileNav
-                ? "users-mobile-menu-button-open"
-                : ""
-            }`}
+            className={`users-mobile-menu-button ${showMobileNav
+              ? "users-mobile-menu-button-open"
+              : ""
+              }`}
             onClick={() =>
               setShowMobileNav((value) => !value)
             }
@@ -580,109 +587,109 @@ export default function UsersPage() {
       )}
 
       {activeTab === "users" ? <>
-      <section
-        className="users-summary"
-        aria-label="Ringkasan user"
-      >
-        <article>
-          <span>Total User</span>
-          <strong>{users.length}</strong>
-          <small>Seluruh akun</small>
-        </article>
+        <section
+          className="users-summary"
+          aria-label="Ringkasan user"
+        >
+          <article>
+            <span>Total User</span>
+            <strong>{users.length}</strong>
+            <small>Seluruh akun</small>
+          </article>
 
-        <article>
-          <span>User Aktif</span>
-          <strong>{activeCount}</strong>
-          <small>Siap digunakan</small>
-        </article>
+          <article>
+            <span>User Aktif</span>
+            <strong>{activeCount}</strong>
+            <small>Siap digunakan</small>
+          </article>
 
-        <article>
-          <span>User Nonaktif</span>
-          <strong>{inactiveCount}</strong>
-          <small>Akses dinonaktifkan</small>
-        </article>
+          <article>
+            <span>User Nonaktif</span>
+            <strong>{inactiveCount}</strong>
+            <small>Akses dinonaktifkan</small>
+          </article>
 
-        <article>
-          <span>Kelola User</span>
-          <strong>{permissionCount}</strong>
-          <small>Memiliki permission</small>
-        </article>
-      </section>
+          <article>
+            <span>Kelola User</span>
+            <strong>{permissionCount}</strong>
+            <small>Memiliki permission</small>
+          </article>
+        </section>
 
-      {false && <section className="users-panel">
-        <div className="users-toolbar">
-          <label className="users-search">
-            <span aria-hidden="true">âŒ•</span>
+        {false && <section className="users-panel">
+          <div className="users-toolbar">
+            <label className="users-search">
+              <span aria-hidden="true">âŒ•</span>
 
-            <input
-              value={search}
+              <input
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+                placeholder="Cari nama, username, email..."
+                aria-label="Cari user"
+              />
+            </label>
+
+            <select
+              value={roleFilter}
               onChange={(event) =>
-                setSearch(event.target.value)
+                setRoleFilter(event.target.value)
               }
-              placeholder="Cari nama, username, email..."
-              aria-label="Cari user"
-            />
-          </label>
+              aria-label="Filter role"
+            >
+              <option value="SEMUA">Semua Role</option>
+              <option value="ADMIN_DEVELOPER">Admin Developer</option>
+              <option value="ADMIN_SISTEM_MUTU">Admin Sistem Mutu</option>
+              <option value="ADMIN">Admin</option>
+              <option value="ADMIN_INSPECTOR">Admin Inspector</option>
+              <option value="INSPECTOR">Inspector</option>
+              <option value="TEAM_WILAYAH">Team Wilayah</option>
+              <option value="PIC">PIC</option>
+              <option value="VIEWER">Viewer</option>
+            </select>
 
-          <select
-            value={roleFilter}
-            onChange={(event) =>
-              setRoleFilter(event.target.value)
-            }
-            aria-label="Filter role"
-          >
-            <option value="SEMUA">Semua Role</option>
-            <option value="ADMIN_DEVELOPER">Admin Developer</option>
-            <option value="ADMIN_SISTEM_MUTU">Admin Sistem Mutu</option>
-            <option value="ADMIN">Admin</option>
-            <option value="ADMIN_INSPECTOR">Admin Inspector</option>
-            <option value="INSPECTOR">Inspector</option>
-            <option value="TEAM_WILAYAH">Team Wilayah</option>
-            <option value="PIC">PIC</option>
-            <option value="VIEWER">Viewer</option>
-          </select>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              aria-label="Filter status"
+            >
+              <option value="SEMUA">Semua Status</option>
+              <option value="AKTIF">Aktif</option>
+              <option value="NONAKTIF">Nonaktif</option>
+            </select>
+          </div>
 
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-            aria-label="Filter status"
-          >
-            <option value="SEMUA">Semua Status</option>
-            <option value="AKTIF">Aktif</option>
-            <option value="NONAKTIF">Nonaktif</option>
-          </select>
-        </div>
-
-        <div className="users-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Nama</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Akses Dashboard</th><th>Kelola User</th><th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan="8" className="users-empty">Memuat data user...</td></tr>
-              ) : visibleUsers.length === 0 ? (
-                <tr><td colSpan="8" className="users-empty">Belum ada user.</td></tr>
-              ) : (
-                visibleUsers.map((user) => (
-                  <tr key={user.id_user}>
-                    <td>{user.nama_lengkap}</td><td>{user.username}</td><td>{user.email || "-"}</td>
-                    <td><span className={`users-badge role-${String(user.role).toLowerCase()}`}>{user.role}</span></td>
-                    <td><span className={`users-badge ${user.aktif ? "status-active" : "status-inactive"}`}>{user.aktif ? "Aktif" : "Nonaktif"}</span></td>
-                    <td>{user.akses_dashboard ? "Ya" : "Tidak"}</td><td>{user.kelola_user ? "Ya" : "Tidak"}</td>
-                    <td><div className="users-actions">
-                      <button type="button" className="users-action" onClick={() => openEdit(user)} title="Edit data user" aria-label={`Edit data ${user.username}`}>Edit</button>
-                      <button type="button" className="users-access-action" onClick={() => openAccessEdit(user)} title="Edit hak akses" aria-label={`Edit hak akses ${user.username}`}>Akses</button>
-                    </div></td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>}
+          <div className="users-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nama</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Akses Dashboard</th><th>Kelola User</th><th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan="8" className="users-empty">Memuat data user...</td></tr>
+                ) : visibleUsers.length === 0 ? (
+                  <tr><td colSpan="8" className="users-empty">Belum ada user.</td></tr>
+                ) : (
+                  visibleUsers.map((user) => (
+                    <tr key={user.id_user}>
+                      <td>{user.nama_lengkap}</td><td>{user.username}</td><td>{user.email || "-"}</td>
+                      <td><span className={`users-badge role-${String(user.role).toLowerCase()}`}>{user.role}</span></td>
+                      <td><span className={`users-badge ${user.aktif ? "status-active" : "status-inactive"}`}>{user.aktif ? "Aktif" : "Nonaktif"}</span></td>
+                      <td>{user.akses_dashboard ? "Ya" : "Tidak"}</td><td>{user.kelola_user ? "Ya" : "Tidak"}</td>
+                      <td><div className="users-actions">
+                        <button type="button" className="users-action" onClick={() => openEdit(user)} title="Edit data user" aria-label={`Edit data ${user.username}`}>Edit</button>
+                        <button type="button" className="users-access-action" onClick={() => openAccessEdit(user)} title="Edit hak akses" aria-label={`Edit hak akses ${user.username}`}>Akses</button>
+                      </div></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>}
       </> : (
         <section className="users-panel users-audit-panel">
           <div className="users-audit-head">
@@ -862,11 +869,10 @@ export default function UsersPage() {
 
                     <td>
                       <span
-                        className={`users-badge ${
-                          user.aktif
-                            ? "status-active"
-                            : "status-inactive"
-                        }`}
+                        className={`users-badge ${user.aktif
+                          ? "status-active"
+                          : "status-inactive"
+                          }`}
                       >
                         {user.aktif
                           ? "Aktif"
@@ -994,245 +1000,245 @@ export default function UsersPage() {
               <label>
                 Nama Lengkap
                 <input
-                value={form.nama_lengkap}
-                onChange={(event) =>
-                  updateField(
-                    "nama_lengkap",
-                    event.target.value
-                  )
-                }
-                required
-              />
-            </label>
-
-            <label>
-              Username
-              <input
-                value={form.username}
-                onChange={(event) =>
-                  updateField(
-                    "username",
-                    event.target.value
-                  )
-                }
-                required
-              />
-            </label>
-
-            <label>
-              Email
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  updateField(
-                    "email",
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              No. Handphone (WhatsApp)
-              <input
-                type="tel"
-                placeholder="Contoh: 081234567890"
-                value={form.no_hp}
-                onChange={(event) =>
-                  updateField(
-                    "no_hp",
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Role
-              <select
-                value={form.role}
-                onChange={(event) =>
-                  updateField(
-                    "role",
-                    event.target.value
-                  )
-                }
-              >
-                <option value="ADMIN">
-                  Admin
-                </option>
-                <option value="INSPECTOR">
-                  Inspector
-                </option>
-                <option value="ADMIN_INSPECTOR">
-                  Admin dan Inspector
-                </option>
-                <option value="ADMIN_DEVELOPER">
-                  Admin Developer
-                </option>
-                <option value="ADMIN_SISTEM_MUTU">
-                  Admin Sistem Mutu
-                </option>
-                <option value="TEAM_WILAYAH">
-                  Team Wilayah / PIC
-                </option>
-                <option value="PIC">
-                  PIC
-                </option>
-                <option value="VIEWER">
-                  Viewer
-                </option>
-              </select>
-            </label>
-
-            <label>
-              Password{" "}
-              {form.id_user
-                ? "Baru (opsional)"
-                : ""}
-              <div className="users-password-field">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
+                  value={form.nama_lengkap}
                   onChange={(event) =>
                     updateField(
-                      "password",
+                      "nama_lengkap",
                       event.target.value
                     )
                   }
-                  required={!form.id_user}
+                  required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((value) => !value)}
-                  aria-label={showPassword ? "Sembunyikan password" : "Lihat password"}
+              </label>
+
+              <label>
+                Username
+                <input
+                  value={form.username}
+                  onChange={(event) =>
+                    updateField(
+                      "username",
+                      event.target.value
+                    )
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) =>
+                    updateField(
+                      "email",
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label>
+                No. Handphone (WhatsApp)
+                <input
+                  type="tel"
+                  placeholder="Contoh: 081234567890"
+                  value={form.no_hp}
+                  onChange={(event) =>
+                    updateField(
+                      "no_hp",
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label>
+                Role
+                <select
+                  value={form.role}
+                  onChange={(event) =>
+                    updateField(
+                      "role",
+                      event.target.value
+                    )
+                  }
                 >
-                  {showPassword ? "Sembunyikan" : "Lihat"}
-                </button>
-              </div>
-            </label>
-
-            <div className="users-permission-title">
-              Status User
-            </div>
-
-            <div className="users-checks">
-              <label className="users-check">
-                <input
-                  type="checkbox"
-                  checked={form.aktif}
-                  onChange={(event) =>
-                    updateField(
-                      "aktif",
-                      event.target.checked
-                    )
-                  }
-                />
-                Aktif
+                  <option value="ADMIN">
+                    Admin
+                  </option>
+                  <option value="INSPECTOR">
+                    Inspector
+                  </option>
+                  <option value="ADMIN_INSPECTOR">
+                    Admin dan Inspector
+                  </option>
+                  <option value="ADMIN_DEVELOPER">
+                    Admin Developer
+                  </option>
+                  <option value="ADMIN_SISTEM_MUTU">
+                    Admin Sistem Mutu
+                  </option>
+                  <option value="TEAM_WILAYAH">
+                    Team Wilayah / PIC
+                  </option>
+                  <option value="PIC">
+                    PIC
+                  </option>
+                  <option value="VIEWER">
+                    Viewer
+                  </option>
+                </select>
               </label>
 
-              <label className="users-check">
-                <input
-                  type="checkbox"
-                  checked={!form.aktif}
-                  onChange={(event) => {
-                    if (event.target.checked) {
-                      updateField("aktif", false);
+              <label>
+                Password{" "}
+                {form.id_user
+                  ? "Baru (opsional)"
+                  : ""}
+                <div className="users-password-field">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(event) =>
+                      updateField(
+                        "password",
+                        event.target.value
+                      )
                     }
-                  }}
-                />
-                Nonaktif
+                    required={!form.id_user}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={showPassword ? "Sembunyikan password" : "Lihat password"}
+                  >
+                    {showPassword ? "Sembunyikan" : "Lihat"}
+                  </button>
+                </div>
               </label>
+
+              <div className="users-permission-title">
+                Status User
+              </div>
+
+              <div className="users-checks">
+                <label className="users-check">
+                  <input
+                    type="checkbox"
+                    checked={form.aktif}
+                    onChange={(event) =>
+                      updateField(
+                        "aktif",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Aktif
+                </label>
+
+                <label className="users-check">
+                  <input
+                    type="checkbox"
+                    checked={!form.aktif}
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        updateField("aktif", false);
+                      }
+                    }}
+                  />
+                  Nonaktif
+                </label>
+              </div>
+
+              <div className="users-permission-title">
+                Hak Akses
+              </div>
+
+              <div className="users-checks">
+
+                <label className="users-check">
+                  <input
+                    type="checkbox"
+                    checked={
+                      form.akses_dashboard &&
+                      form.akses_form_inspeksi &&
+                      form.akses_data_temuan &&
+                      form.kelola_user
+                    }
+                    onChange={(event) =>
+                      updateAllAccess(
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Semua Akses
+                </label>
+
+                <label className="users-check">
+                  <input
+                    type="checkbox"
+                    checked={
+                      form.akses_dashboard
+                    }
+                    onChange={(event) =>
+                      updateField(
+                        "akses_dashboard",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Dashboard
+                </label>
+
+                <label className="users-check">
+                  <input
+                    type="checkbox"
+                    checked={
+                      form.akses_form_inspeksi
+                    }
+                    onChange={(event) =>
+                      updateField(
+                        "akses_form_inspeksi",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Form Inspeksi
+                </label>
+
+                <label className="users-check">
+                  <input
+                    type="checkbox"
+                    checked={
+                      form.akses_data_temuan
+                    }
+                    onChange={(event) =>
+                      updateField(
+                        "akses_data_temuan",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Data Temuan
+                </label>
+
+                <label className="users-check">
+                  <input
+                    type="checkbox"
+                    checked={form.kelola_user}
+                    onChange={(event) =>
+                      updateField(
+                        "kelola_user",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Kelola Akses
+                </label>
+              </div>
             </div>
-
-            <div className="users-permission-title">
-              Hak Akses
-            </div>
-
-            <div className="users-checks">
-
-              <label className="users-check">
-                <input
-                  type="checkbox"
-                  checked={
-                    form.akses_dashboard &&
-                    form.akses_form_inspeksi &&
-                    form.akses_data_temuan &&
-                    form.kelola_user
-                  }
-                  onChange={(event) =>
-                    updateAllAccess(
-                      event.target.checked
-                    )
-                  }
-                />
-                Semua Akses
-              </label>
-
-              <label className="users-check">
-                <input
-                  type="checkbox"
-                  checked={
-                    form.akses_dashboard
-                  }
-                  onChange={(event) =>
-                    updateField(
-                      "akses_dashboard",
-                      event.target.checked
-                    )
-                  }
-                />
-                Dashboard
-              </label>
-
-              <label className="users-check">
-                <input
-                  type="checkbox"
-                  checked={
-                    form.akses_form_inspeksi
-                  }
-                  onChange={(event) =>
-                    updateField(
-                      "akses_form_inspeksi",
-                      event.target.checked
-                    )
-                  }
-                />
-                Form Inspeksi
-              </label>
-
-              <label className="users-check">
-                <input
-                  type="checkbox"
-                  checked={
-                    form.akses_data_temuan
-                  }
-                  onChange={(event) =>
-                    updateField(
-                      "akses_data_temuan",
-                      event.target.checked
-                    )
-                  }
-                />
-                Data Temuan
-              </label>
-
-              <label className="users-check">
-                <input
-                  type="checkbox"
-                  checked={form.kelola_user}
-                  onChange={(event) =>
-                    updateField(
-                      "kelola_user",
-                      event.target.checked
-                    )
-                  }
-                />
-                Kelola Akses
-              </label>
-            </div>
-          </div>
 
             <div className="users-modal-actions">
               <button
@@ -1269,188 +1275,490 @@ export default function UsersPage() {
         }
 
         .users-topbar {
-          position: fixed;
-          z-index: 99999;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 76px !important;
-          min-height: 76px !important;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 20px;
-          padding: 0 58px !important;
-          background: rgba(255,255,255,.96);
-          border-bottom: 1px solid #e3eae5;
-          box-shadow: none;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-        }
+  position: fixed;
+  z-index: 99999;
+  top: 0;
+  left: 0;
+  right: 0;
 
-        .users-brand {
-          display: flex;
-          align-items: center;
-          gap: 17px !important;
-          min-width: 300px;
-          height: auto !important;
-        }
+  height: 78px !important;
+  min-height: 78px !important;
 
-        .users-brand-logo {
-          width: 100px !important;
-          height: 49px !important;
-          min-width: 100px !important;
-          flex: 0 0 100px !important;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-decoration: none;
-          overflow: hidden;
-        }
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
 
-        .users-brand-logo img {
-          display: block;
-          width: 100% !important;
-          height: 100% !important;
-          max-width: none !important;
-          object-fit: contain;
-        }
+  gap: 20px !important;
 
-        .users-brand-text {
-          display: flex;
-          flex-direction: column;
-          gap: 3px !important;
-          min-width: 0;
-        }
+  padding: 10px clamp(18px, 4vw, 54px) !important;
 
-        .users-brand-text b {
-          color: #142119;
-          font-size: 16px !important;
-          line-height: 20px !important;
-          font-weight: 800;
-          white-space: nowrap;
-        }
+  background: rgba(255, 255, 255, 0.96);
 
-        .users-brand-text span {
-          color: #87918a;
-          font-size: 12px !important;
-          line-height: 16px !important;
-          white-space: nowrap;
-        }
+  border-bottom: 1px solid #e3eae5;
 
-        .users-nav {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 7px !important;
-          flex-shrink: 0;
-          height: 100% !important;
-          font-family: "Poppins", sans-serif;
-        }
+  box-shadow: none;
 
-        .users-nav-page {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 42px !important;
-          height: 42px !important;
-          padding: 10px 13px !important;
-          border: 0;
-          border-radius: 10px !important;
-          background: transparent;
-          color: #5f6c64;
-          font-family: "Poppins", sans-serif;
-          font-size: 12px !important;
-          font-weight: 600;
-          line-height: 1.2;
-          letter-spacing: 0;
-          text-decoration: none;
-          white-space: nowrap;
-          transition:
-            background .16s ease,
-            color .16s ease,
-            transform .16s ease;
-        }
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
 
-        .users-nav-page:hover {
-          color: #123d25;
-          background: #f1f6f2;
-        }
 
-        .users-nav-page-active {
-          color: #087f3e !important;
-          background: #edf8f0 !important;
-          box-shadow: inset 0 -2px 0 #0b9449 !important;
-        }
+.users-brand {
+  display: flex !important;
+  align-items: center !important;
 
-        .users-profile-wrapper {
-          position: relative;
-          flex: 0 0 auto;
-          margin-left: 8px !important;
-        }
+  gap: 12px !important;
 
-        .users-profile-button {
-          display: inline-flex;
-          align-items: center;
-          gap: 9px;
-          min-width: 145px !important;
-          width: auto !important;
-          height: 44px !important;
-          padding: 4px 12px 4px 6px !important;
-          border: 1px solid #d9e3dc;
-          border-radius: 12px;
-          background: #fff;
-          color: #304037;
-          font-family: "Poppins", sans-serif;
-          cursor: pointer;
-        }
+  min-width: 0 !important;
 
-        .users-profile-avatar {
-          width: 34px;
-          height: 34px;
-          display: grid;
-          place-items: center;
-          flex: 0 0 34px;
-          border-radius: 50%;
-          background: #099447;
-          color: #fff;
-          font-size: 14px;
-          font-weight: 700;
-        }
+  height: auto !important;
+}
 
-        .users-profile-avatar svg {
-          width: 18px;
-          height: 18px;
-        }
 
-        .users-profile-text {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          min-width: 0;
-          line-height: 1.1;
-        }
+.users-brand-logo {
+  width: 110px !important;
+  height: 52px !important;
 
-        .users-profile-text strong {
-          color: #17251d;
-          font-size: 11px;
-          white-space: nowrap;
-        }
+  min-width: 110px !important;
 
-        .users-profile-text small {
-          margin-top: 3px;
-          color: #7b8780;
-          font-size: 8px;
-          font-weight: 600;
-          white-space: nowrap;
-        }
+  flex: 0 0 110px !important;
 
-        .users-profile-chevron {
-          margin-left: auto;
-          color: #718078;
-          font-size: 9px;
-        }
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  text-decoration: none !important;
+
+  overflow: hidden !important;
+}
+
+
+.users-brand-logo img {
+  display: block !important;
+
+  width: 100% !important;
+
+  max-width: 82px !important;
+
+  height: auto !important;
+
+  object-fit: contain !important;
+}
+
+
+.users-brand-text {
+  display: flex !important;
+  flex-direction: column !important;
+
+  gap: 2px !important;
+
+  min-width: 0 !important;
+
+  font-family: "Inter", Arial, sans-serif !important;
+}
+
+
+.users-brand-text b {
+  color: #142119;
+
+  font-family: "Inter", Arial, sans-serif !important;
+
+  font-size: 15px !important;
+
+  line-height: 1.2 !important;
+
+  font-weight: 800;
+
+  white-space: nowrap;
+}
+
+
+.users-brand-text span {
+  color: #87918a;
+
+  font-family: "Inter", Arial, sans-serif !important;
+
+  font-size: 11px !important;
+
+  line-height: 1.2 !important;
+
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+
+.users-nav {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+
+  gap: 7px !important;
+
+  height: auto !important;
+
+  flex: 0 0 auto !important;
+
+  font-family: "Poppins", sans-serif !important;
+
+  font-weight: 600 !important;
+}
+
+
+.users-nav-page {
+  position: relative;
+
+  display: inline-flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-height: 42px !important;
+  height: 42px !important;
+
+  padding: 10px 13px !important;
+
+  border: 0;
+
+  border-radius: 10px !important;
+
+  background: transparent;
+
+  color: #5f6c64;
+
+  font-family: "Poppins", sans-serif !important;
+
+  font-size: 12px !important;
+
+  font-weight: 600;
+
+  line-height: 1.2;
+
+  letter-spacing: 0;
+
+  text-decoration: none;
+
+  white-space: nowrap;
+
+  transition:
+    background .16s ease,
+    color .16s ease,
+    transform .16s ease;
+}
+
+
+.users-nav-page:hover {
+  color: #123d25;
+
+  background: #f1f6f2;
+}
+
+
+.users-nav-page-active {
+  color: #087f3e !important;
+
+  background: #edf8f0 !important;
+
+  box-shadow: inset 0 -2px 0 #0b9449 !important;
+
+  border-radius: 10px !important;
+}
+
+
+.users-profile-wrapper {
+  position: relative;
+
+  display: flex !important;
+  align-items: center !important;
+
+  flex: 0 0 auto;
+
+  margin-left: 0 !important;
+}
+
+
+.users-profile-button {
+  display: inline-flex !important;
+
+  align-items: center !important;
+
+  gap: 9px !important;
+
+  min-width: 145px !important;
+
+  width: auto !important;
+
+  height: 44px !important;
+
+  min-height: 44px !important;
+
+  padding: 4px 10px 4px 7px !important;
+
+  border: 1px solid #d9e3dc;
+
+  border-radius: 12px;
+
+  background: #fff;
+
+  color: #304037;
+
+  font-family: "Poppins", sans-serif;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+
+.users-profile-avatar {
+  width: 34px !important;
+  height: 34px !important;
+
+  min-width: 34px !important;
+
+  display: flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  flex: 0 0 34px !important;
+
+  border-radius: 50%;
+
+  background: linear-gradient(
+    135deg,
+    #18843c,
+    #0a9b4d
+  ) !important;
+
+  color: #fff;
+
+  font-size: 14px;
+
+  font-weight: 700;
+}
+
+
+.users-profile-avatar svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+
+.users-profile-text {
+  display: flex !important;
+
+  flex-direction: column !important;
+
+  align-items: flex-start !important;
+
+  justify-content: center !important;
+
+  min-width: 0 !important;
+
+  flex: 1 1 auto !important;
+
+  gap: 0 !important;
+
+  overflow: hidden !important;
+
+  line-height: 1.1;
+}
+
+
+.users-profile-text strong {
+  max-width: 85px !important;
+
+  overflow: hidden !important;
+
+  text-overflow: ellipsis !important;
+
+  white-space: nowrap !important;
+
+  color: #17251d;
+
+  font-family: "Poppins", sans-serif !important;
+
+  font-size: 11px !important;
+
+  font-weight: 600;
+
+  line-height: 1.05 !important;
+}
+
+
+.users-profile-text small.users-role-admin-developer {
+  display: inline-flex !important;
+
+  align-items: center !important;
+
+  width: fit-content !important;
+
+  margin-top: 4px !important;
+
+  padding: 1px 6px !important;
+
+  border-radius: 4px !important;
+
+  background: #ffd21f !important;
+
+  color: #6b5200 !important;
+
+  font-family: "Poppins", sans-serif !important;
+
+  font-size: 8px !important;
+
+  font-weight: 700 !important;
+
+  line-height: 1.4 !important;
+
+  letter-spacing: 0.3px !important;
+
+  white-space: nowrap !important;
+
+  box-shadow: 0 0 8px rgba(255, 210, 31, 0.75) !important;
+}
+
+
+.users-role-active-dot {
+  display: inline-block;
+
+  width: 6px;
+  height: 6px;
+
+  margin-right: 5px;
+
+  border-radius: 50%;
+
+  background: #087f3f;
+
+  box-shadow: 0 0 5px rgba(8, 127, 63, 0.65);
+}
+
+
+.users-profile-text small {
+  margin-top: 4px !important;
+
+  color: #7b8780;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+
+.users-profile-chevron {
+  margin-left: 2px !important;
+
+  display: flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  color: #718078;
+
+  font-size: 8px !important;
+
+  line-height: 1;
+
+  transform: translateY(-1px);
+}
+
+
+.users-nav-logout {
+  display: inline-flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: auto !important;
+
+  min-width: 0 !important;
+
+  flex: 0 0 auto !important;
+
+  box-sizing: border-box !important;
+
+  min-height: 30px !important;
+  height: 30px !important;
+
+  padding: 5px 9px !important;
+
+  border: 1px solid #d9e3dc;
+
+  border-radius: 7px;
+
+  background: #fff;
+
+  color: #304037;
+
+  font-family: "Poppins", sans-serif !important;
+
+  font-size: 10px !important;
+
+  font-weight: 600;
+
+  line-height: 1.1;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+}
+
+
+.users-nav-logout:hover {
+  background: #f7faf8;
+
+  color: #123d25;
+
+  border-color: #cbd8cf;
+}
+
+
+.users-nav-manage {
+  display: inline-flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-height: 27px !important;
+  height: 27px !important;
+
+  gap: 5px !important;
+
+  padding: 0 10px !important;
+
+  border: 1px solid #16833f;
+
+  border-radius: 7px;
+
+  background: #16833f;
+
+  color: #fff;
+
+  font-family: "Poppins", sans-serif !important;
+
+  font-size: 10px !important;
+
+  font-weight: 700;
+
+  line-height: 1.1;
+
+  text-decoration: none;
+
+  white-space: nowrap;
+}
+
+
+.users-nav-manage:hover {
+  background: #117236;
+
+  border-color: #117236;
+
+  color: #fff;
+}
 
         .users-profile-popup {
           position: absolute;
@@ -1555,6 +1863,13 @@ export default function UsersPage() {
           font-size: 10px !important;
           font-weight: 800;
         }
+
+.users-role-badge.users-role-admin-developer {
+  background: #ffd21f !important;
+  color: #6b5200 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 8px rgba(255, 210, 31, 0.75) !important;
+}
 
         .users-profile-logout {
           display: flex;
