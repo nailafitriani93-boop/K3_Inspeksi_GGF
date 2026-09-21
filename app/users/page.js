@@ -8,6 +8,7 @@ const EMPTY_FORM = {
   nama_lengkap: "",
   username: "",
   email: "",
+  no_hp: "",
   role: "INSPECTOR",
   aktif: true,
   akses_dashboard: false,
@@ -57,7 +58,7 @@ export default function UsersPage() {
     return users.filter((user) => {
       const matchesSearch =
         !keyword ||
-        [user.nama_lengkap, user.username, user.email, user.role].some(
+        [user.nama_lengkap, user.username, user.email, user.no_hp, user.role].some(
           (value) =>
             String(value || "")
               .toLowerCase()
@@ -235,6 +236,7 @@ export default function UsersPage() {
     setForm({
       ...EMPTY_FORM,
       ...user,
+      no_hp: user.no_hp || "",
       password: "",
     });
     setShowPassword(false);
@@ -808,6 +810,7 @@ export default function UsersPage() {
                 <th>Nama</th>
                 <th>Username</th>
                 <th>Email</th>
+                <th>No. Handphone</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th>Akses Dashboard</th>
@@ -820,7 +823,7 @@ export default function UsersPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan="8"
+                    colSpan="9"
                     className="users-empty"
                   >
                     Memuat data user...
@@ -829,7 +832,7 @@ export default function UsersPage() {
               ) : visibleUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="8"
+                    colSpan="9"
                     className="users-empty"
                   >
                     Belum ada user.
@@ -842,6 +845,9 @@ export default function UsersPage() {
                     <td>{user.username}</td>
                     <td>
                       {user.email || "-"}
+                    </td>
+                    <td>
+                      {user.no_hp || "-"}
                     </td>
 
                     <td>
@@ -970,7 +976,7 @@ export default function UsersPage() {
             <div className="users-modal-head">
               <h2>
                 {form.id_user
-                  ? "Edit User dan Hak Akses"
+                  ? "Edit User"
                   : "Tambah User"}
               </h2>
 
@@ -984,9 +990,10 @@ export default function UsersPage() {
               </button>
             </div>
 
-            <label>
-              Nama Lengkap
-              <input
+            <div className="users-modal-body">
+              <label>
+                Nama Lengkap
+                <input
                 value={form.nama_lengkap}
                 onChange={(event) =>
                   updateField(
@@ -1020,6 +1027,21 @@ export default function UsersPage() {
                 onChange={(event) =>
                   updateField(
                     "email",
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              No. Handphone (WhatsApp)
+              <input
+                type="tel"
+                placeholder="Contoh: 081234567890"
+                value={form.no_hp}
+                onChange={(event) =>
+                  updateField(
+                    "no_hp",
                     event.target.value
                   )
                 }
@@ -1210,6 +1232,7 @@ export default function UsersPage() {
                 Kelola Akses
               </label>
             </div>
+          </div>
 
             <div className="users-modal-actions">
               <button
@@ -2053,36 +2076,51 @@ export default function UsersPage() {
         .users-modal-backdrop {
           position: fixed;
           inset: 0;
-          z-index: 2000;
-          display: grid;
-          place-items: center;
-          padding: 24px;
-          background: rgba(20, 35, 25, .35);
+          z-index: 999999 !important;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          padding: 40px 16px;
+          background: rgba(20, 35, 25, .52);
+          overflow-y: auto;
         }
 
         .users-modal {
           width: min(100%, 760px);
-          max-height: calc(100vh - 48px);
-          overflow: auto;
-          padding: 24px;
+          max-height: calc(100vh - 80px);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          margin: 0 auto;
+          padding: 0;
           border: 1px solid #dce8df;
           border-radius: 16px;
           background: #fff;
           box-shadow:
-            0 20px 60px rgba(20, 45, 29, .2);
+            0 24px 65px rgba(18, 38, 25, .28);
         }
 
         .users-modal-head {
+          flex-shrink: 0;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 18px;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e4ece6;
+          background: #ffffff;
         }
 
         .users-modal h2 {
           margin: 0;
           color: #142119;
           font-size: 20px;
+          font-weight: 800;
+        }
+
+        .users-modal-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 20px 24px;
         }
 
         .users-permission-title {
@@ -2175,10 +2213,14 @@ export default function UsersPage() {
         }
 
         .users-modal-actions {
+          flex-shrink: 0;
           display: flex;
           justify-content: flex-end;
-          gap: 8px;
-          margin-top: 22px;
+          gap: 10px;
+          padding: 16px 24px;
+          border-top: 1px solid #e4ece6;
+          background: #fafcfa;
+          margin-top: 0;
         }
 
         /* ============================================================
@@ -2804,12 +2846,13 @@ export default function UsersPage() {
           }
 
           .users-page .users-modal-backdrop {
-            padding: 12px !important;
+            padding: 16px 10px !important;
+            z-index: 999999 !important;
           }
 
           .users-page .users-modal {
             width: 100% !important;
-            max-height: calc(100vh - 24px) !important;
+            max-height: calc(100vh - 32px) !important;
           }
         }
       `}</style>

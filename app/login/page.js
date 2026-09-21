@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+
   const nextPath =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("next");
@@ -81,7 +82,7 @@ export default function LoginPage() {
 
           body: JSON.stringify({
             username: usernameValue,
-            password: password,
+            password,
           }),
         }
       );
@@ -105,7 +106,7 @@ export default function LoginPage() {
       ) {
         setError(
           result.message ||
-            "Username atau password salah."
+          "Username atau password salah."
         );
 
         return;
@@ -123,74 +124,49 @@ export default function LoginPage() {
       }
 
       /*
-       * =========================================
        * DATA USER YANG DIKIRIM API
-       * =========================================
-       *
-       * API mengirim:
-       *
-       * id_user
-       * username
-       * nama_lengkap
-       * role
-       *
-       * Password TIDAK disimpan.
        */
-
       const userData = {
         id_user: result.user.id_user,
         username: result.user.username,
         nama_lengkap:
           result.user.nama_lengkap,
         role: result.user.role,
-        akses_dashboard: Boolean(result.user.akses_dashboard),
-        kelola_user: Boolean(result.user.kelola_user),
+        akses_dashboard: Boolean(
+          result.user.akses_dashboard
+        ),
+        kelola_user: Boolean(
+          result.user.kelola_user
+        ),
       };
 
       /*
-       * =========================================
        * SIMPAN USER KE SESSION STORAGE
-       * =========================================
-       *
-       * "user" tetap digunakan supaya
-       * kompatibel dengan kode lama.
        */
-
       sessionStorage.setItem(
         "user",
         JSON.stringify(userData)
       );
 
       /*
-       * =========================================
        * SIMPAN USER KE LOCAL STORAGE
-       * =========================================
-       *
-       * Digunakan Dashboard/Profile.
        */
-
       localStorage.setItem(
         "k3_user",
         JSON.stringify(userData)
       );
 
       /*
-       * Simpan juga dengan key "user"
-       * agar kompatibel dengan kode lain
-       * yang membaca localStorage.
+       * KOMPATIBILITAS DENGAN KODE LAMA
        */
-
       localStorage.setItem(
         "user",
         JSON.stringify(userData)
       );
 
       /*
-       * =========================================
        * INGAT SAYA
-       * =========================================
        */
-
       if (remember) {
         localStorage.setItem(
           "remember_username",
@@ -203,24 +179,19 @@ export default function LoginPage() {
       }
 
       /*
-       * =========================================
        * BERSIHKAN PASSWORD DARI STATE
-       * =========================================
        */
-
       setPassword("");
 
       /*
-       * =========================================
        * LOGIN BERHASIL
-       * =========================================
-       *
-       * Tetap diarahkan ke /inspeksi
-       * sesuai sistem kamu sebelumnya.
        */
-
       router.replace(
-        ["/dashboard", "/inspeksi", "/users"].includes(nextPath)
+        [
+          "/dashboard",
+          "/inspeksi",
+          "/users",
+        ].includes(nextPath)
           ? nextPath
           : "/users"
       );
@@ -241,44 +212,6 @@ export default function LoginPage() {
   }
 
   /*
-   * LOGIN SEBAGAI TAMU
-   */
-  function loginSebagaiTamu() {
-    const guestUser = {
-      id_user: null,
-      username: "guest",
-      nama_lengkap: "Tamu",
-      role: "GUEST",
-    };
-
-    /*
-     * Session storage
-     */
-    sessionStorage.setItem(
-      "user",
-      JSON.stringify(guestUser)
-    );
-
-    /*
-     * Local storage
-     *
-     * Dibuat agar sistem profile
-     * juga mengenali user tamu.
-     */
-    localStorage.setItem(
-      "k3_user",
-      JSON.stringify(guestUser)
-    );
-
-    localStorage.setItem(
-      "user",
-      JSON.stringify(guestUser)
-    );
-
-    router.replace("/guest");
-  }
-
-  /*
    * LUPA PASSWORD
    */
   function lupaPassword() {
@@ -293,38 +226,29 @@ export default function LoginPage() {
       suppressHydrationWarning
     >
 
-      {/* =====================================================
-          BACKGROUND
-      ====================================================== */}
+      {/* BACKGROUND */}
 
       <div className="background-image" />
 
       <div className="background-overlay" />
 
 
-      {/* =====================================================
-          BAGIAN KIRI
-      ====================================================== */}
+      {/* BAGIAN KIRI */}
 
       <section className="visual-section">
 
-        {/* =================================================
-            BRAND + LOGO NANAS
-        ================================================== */}
+        {/* BRAND */}
 
         <div className="brand">
 
           <div className="brand-logo">
-
             <img
               src="/logo-nanas.png"
               alt="Logo"
             />
-
           </div>
 
           <div className="brand-text">
-
             <strong>
               INSPEKSI K3
             </strong>
@@ -332,11 +256,12 @@ export default function LoginPage() {
             <span>
               Keselamatan dan Kesehatan Kerja
             </span>
-
           </div>
 
         </div>
 
+
+        {/* VISUAL CONTENT */}
 
         <div className="visual-content">
 
@@ -355,6 +280,8 @@ export default function LoginPage() {
         </div>
 
 
+        {/* FOOTER */}
+
         <div className="visual-footer">
           © 2026 Sistem Inspeksi K3
         </div>
@@ -362,17 +289,13 @@ export default function LoginPage() {
       </section>
 
 
-      {/* =====================================================
-          LOGIN
-      ====================================================== */}
+      {/* LOGIN */}
 
       <section className="login-section">
 
         <div className="login-card">
 
-          {/* =================================================
-              LOGO GGF
-          ================================================== */}
+          {/* LOGO GGF */}
 
           <div className="login-logo">
 
@@ -383,6 +306,8 @@ export default function LoginPage() {
 
           </div>
 
+
+          {/* HEADER */}
 
           <div className="login-header">
 
@@ -397,9 +322,7 @@ export default function LoginPage() {
           </div>
 
 
-          {/* =================================================
-              ERROR
-          ================================================== */}
+          {/* ERROR */}
 
           {error && (
             <div className="error-message">
@@ -408,9 +331,7 @@ export default function LoginPage() {
           )}
 
 
-          {/* =================================================
-              FORM
-          ================================================== */}
+          {/* FORM */}
 
           <form
             onSubmit={handleLogin}
@@ -530,53 +451,19 @@ export default function LoginPage() {
               className="login-button"
               disabled={loading}
             >
-
               {loading
                 ? "Memproses..."
                 : "Masuk"}
-
             </button>
 
           </form>
-
-
-          {/* =================================================
-              DIVIDER
-          ================================================== */}
-
-          <div className="divider">
-
-            <span />
-
-            <small>
-              atau
-            </small>
-
-            <span />
-
-          </div>
-
-
-          {/* =================================================
-              GUEST
-          ================================================== */}
-
-          <button
-            type="button"
-            className="guest-button"
-            onClick={loginSebagaiTamu}
-          >
-            Masuk sebagai tamu
-          </button>
 
         </div>
 
       </section>
 
 
-      {/* =====================================================
-          CSS
-      ====================================================== */}
+      {/* CSS */}
 
       <style jsx global>{`
 
@@ -612,15 +499,12 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           PAGE
-        ================================================== */
+        /* PAGE */
 
         .login-page {
           position: relative;
 
           width: 100%;
-
           min-height: 100vh;
 
           display: grid;
@@ -636,9 +520,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           BACKGROUND
-        ================================================== */
+        /* BACKGROUND */
 
         .background-image {
           position: fixed;
@@ -656,27 +538,33 @@ export default function LoginPage() {
         }
 
 
+        /*
+         * BACKGROUND OVERLAY
+         *
+         * Background tetap menggunakan
+         * login-bg.jpg.
+         *
+         * Overlay dibuat gelap merata
+         * agar menyerupai gambar referensi.
+         */
+
         .background-overlay {
-          position: fixed;
+  position: fixed;
+  inset: 0;
 
-          inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(7, 24, 15, 0.92) 0%,
+      rgba(15, 42, 28, 0.60) 50%,
+      rgba(7, 24, 15, 0.92) 100%
+    );
 
-          background:
-            linear-gradient(
-              90deg,
-              rgba(20, 61, 42, 0.80) 0%,
-              rgba(20, 61, 42, 0.60) 43%,
-              rgba(246, 249, 247, 0.93) 75%,
-              rgba(246, 249, 247, 0.98) 100%
-            );
-
-          z-index: 1;
-        }
+  z-index: 1;
+}
 
 
-        /* ==================================================
-           LEFT SECTION
-        ================================================== */
+        /* LEFT SECTION */
 
         .visual-section {
           position: relative;
@@ -699,9 +587,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           BRAND
-        ================================================== */
+        /* BRAND */
 
         .brand {
           display: flex;
@@ -712,9 +598,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           LOGO NANAS
-        ================================================== */
+        /* LOGO NANAS */
 
         .brand-logo {
           width: 50px;
@@ -770,9 +654,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           VISUAL CONTENT
-        ================================================== */
+        /* VISUAL CONTENT */
 
         .visual-content {
           max-width: 610px;
@@ -816,9 +698,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           FOOTER
-        ================================================== */
+        /* FOOTER */
 
         .visual-footer {
           font-size: 12px;
@@ -830,9 +710,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           LOGIN SECTION
-        ================================================== */
+        /* LOGIN SECTION */
 
         .login-section {
           position: relative;
@@ -851,9 +729,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           LOGIN CARD
-        ================================================== */
+        /* LOGIN CARD */
 
         .login-card {
           width: 100%;
@@ -874,9 +750,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           LOGO GGF
-        ================================================== */
+        /* LOGO GGF */
 
         .login-logo {
           width: 100%;
@@ -902,9 +776,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           HEADER
-        ================================================== */
+        /* HEADER */
 
         .login-header {
           text-align: center;
@@ -945,9 +817,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           ERROR
-        ================================================== */
+        /* ERROR */
 
         .error-message {
           margin-bottom: 20px;
@@ -972,9 +842,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           INPUT GROUP
-        ================================================== */
+        /* INPUT GROUP */
 
         .input-group {
           margin-bottom: 19px;
@@ -1044,9 +912,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           PASSWORD
-        ================================================== */
+        /* PASSWORD */
 
         .password-wrapper {
           position: relative;
@@ -1096,9 +962,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           OPTIONS
-        ================================================== */
+        /* OPTIONS */
 
         .login-options {
           display: flex;
@@ -1169,9 +1033,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           LOGIN BUTTON
-        ================================================== */
+        /* LOGIN BUTTON */
 
         .login-button {
           width: 100%;
@@ -1220,86 +1082,7 @@ export default function LoginPage() {
         }
 
 
-        /* ==================================================
-           DIVIDER
-        ================================================== */
-
-        .divider {
-          display: flex;
-
-          align-items: center;
-
-          gap: 12px;
-
-          margin:
-            23px 0;
-        }
-
-
-        .divider span {
-          flex: 1;
-
-          height: 1px;
-
-          background:
-            #e3e7e4;
-        }
-
-
-        .divider small {
-          color:
-            #8b948e;
-
-          font-size: 12px;
-
-          font-weight: 400;
-        }
-
-
-        /* ==================================================
-           GUEST BUTTON
-        ================================================== */
-
-        .guest-button {
-          width: 100%;
-
-          height: 50px;
-
-          border:
-            1px solid #d9e0db;
-
-          border-radius: 9px;
-
-          background:
-            #ffffff;
-
-          color:
-            #34764c;
-
-          font-size: 14px;
-
-          font-weight: 600;
-
-          cursor: pointer;
-
-          transition:
-            background 0.2s ease,
-            border-color 0.2s ease;
-        }
-
-
-        .guest-button:hover {
-          background:
-            #f5faf6;
-
-          border-color:
-            #c8d7cc;
-        }
-
-
-        /* ==================================================
-           TABLET
-        ================================================== */
+        /* TABLET */
 
         @media (max-width: 900px) {
 
@@ -1344,21 +1127,18 @@ export default function LoginPage() {
           }
 
 
-          .background-overlay {
-            background:
-              linear-gradient(
-                180deg,
-                rgba(20,61,42,0.80),
-                rgba(20,61,42,0.67)
-              );
-          }
+         .background-overlay {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(7, 24, 15, 0.92) 0%,
+      rgba(15, 42, 28, 0.60) 50%,
+      rgba(7, 24, 15, 0.92) 100%
+    );
+}
 
-        }
 
-
-        /* ==================================================
-           MOBILE
-        ================================================== */
+        /* MOBILE */
 
         @media (max-width: 560px) {
 

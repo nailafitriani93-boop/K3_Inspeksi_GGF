@@ -187,6 +187,7 @@ model users {
   password     String   @db.VarChar(255)
   nama_lengkap String   @db.VarChar(200)
   email        String?  @db.VarChar(200)
+  no_hp        String?  @db.VarChar(50)
   role         String   @default("INSPECTOR") @db.VarChar(20)
   akses_dashboard Boolean @default(false)
   akses_form_inspeksi Boolean @default(false)

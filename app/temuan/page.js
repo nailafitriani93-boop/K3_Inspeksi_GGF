@@ -1935,11 +1935,11 @@ setData(
         .detail-modal-overlay {
           position: fixed;
           inset: 0;
-          z-index: 1100;
+          z-index: 999999;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           justify-content: center;
-          padding: 24px;
+          padding: 90px 24px 24px;
           background: rgba(20, 35, 25, 0.42);
           overflow-y: auto;
           pointer-events: auto;
@@ -3047,6 +3047,21 @@ setData(
           line-height: 1.05 !important;
         }
 
+        .temuan-page .profile-role-badge {
+          display: inline-block !important;
+          margin-top: 4px !important;
+          padding: 1px 6px !important;
+          border-radius: 4px !important;
+          background: #f5c518 !important;
+          color: #5a3c00 !important;
+          font-family: "Poppins", sans-serif !important;
+          font-size: 8px !important;
+          font-weight: 700 !important;
+          line-height: 1.4 !important;
+          letter-spacing: 0.3px !important;
+          white-space: nowrap !important;
+        }
+
         .temuan-page .profile-button > .profile-chevron {
           margin-left: 2px !important;
           display: flex !important;
@@ -3461,10 +3476,10 @@ setData(
                       "Pengguna"}
                   </strong>
 
-                  <small>
+                  <span className="profile-role-badge">
                     {currentUser?.role ||
                       "-"}
-                  </small>
+                  </span>
                 </span>
 
                 <span
