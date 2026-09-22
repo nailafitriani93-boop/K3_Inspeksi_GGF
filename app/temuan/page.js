@@ -272,7 +272,7 @@ export default function DataTemuanPage() {
           setCurrentUser(result.user);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // ============================================================
@@ -328,35 +328,35 @@ export default function DataTemuanPage() {
         }
       );
 
-const responseText = await response.text();
+      const responseText = await response.text();
 
-let result;
+      let result;
 
-try {
-  result = JSON.parse(responseText);
-} catch {
-  throw new Error(
-    "API /api/temuan/data tidak mengembalikan JSON. Periksa error pada route API."
-  );
-}
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          "API /api/temuan/data tidak mengembalikan JSON. Periksa error pada route API."
+        );
+      }
 
-if (!response.ok) {
-  throw new Error(
-    result?.error ||
-      "Gagal mengambil data temuan."
-  );
-}
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+          "Gagal mengambil data temuan."
+        );
+      }
 
-setData(
-  Array.isArray(result?.data)
-    ? result.data
-    : []
-);
+      setData(
+        Array.isArray(result?.data)
+          ? result.data
+          : []
+      );
     } catch (err) {
       console.error(err);
       setError(
         err?.message ||
-          "Gagal mengambil data temuan."
+        "Gagal mengambil data temuan."
       );
     } finally {
       setLoading(false);
@@ -459,15 +459,15 @@ setData(
         wilayah === "Semua Wilayah" ||
         (wilayah.startsWith("Wilayah ") &&
           nomorWilayah ===
-            Number(
-              wilayah.replace(
-                "Wilayah ",
-                ""
-              )
-            )) ||
+          Number(
+            wilayah.replace(
+              "Wilayah ",
+              ""
+            )
+          )) ||
         (!wilayah.startsWith("Wilayah ") &&
           namaWilayah.toLowerCase() ===
-            wilayah.toLowerCase());
+          wilayah.toLowerCase());
 
       const statusMatch =
         status === "Semua Status" ||
@@ -501,9 +501,9 @@ setData(
         if (periode === "Bulan Ini") {
           periodeMatch =
             date.getMonth() ===
-              now.getMonth() &&
+            now.getMonth() &&
             date.getFullYear() ===
-              now.getFullYear();
+            now.getFullYear();
         }
 
         if (periode === "3 Bulan") {
@@ -677,7 +677,7 @@ setData(
     } catch (err) {
       setCloseError(
         err?.message ||
-          "Gagal memproses foto."
+        "Gagal memproses foto."
       );
     }
   }
@@ -751,7 +751,7 @@ setData(
       if (!response.ok) {
         throw new Error(
           result?.error ||
-            "Gagal melakukan close temuan."
+          "Gagal melakukan close temuan."
         );
       }
 
@@ -789,7 +789,7 @@ setData(
 
       setCloseError(
         err?.message ||
-          "Gagal melakukan close temuan."
+        "Gagal melakukan close temuan."
       );
     } finally {
       setCloseLoading(false);
@@ -1273,11 +1273,17 @@ setData(
           background: #e9f2ff;
         }
 
+        .role-admin-developer {
+  color: #6b5200;
+  background: #ffd21f;
+  box-shadow: 0 0 8px rgba(255, 210, 31, 0.75);
+}
+
         .profile-logout {
           width: 100%;
           height: 38px;
 
-          display: flex;
+          display: none;
           align-items: center;
           justify-content: center;
           gap: 8px;
@@ -2656,7 +2662,7 @@ setData(
     display: block !important;
 
     width: 100% !important;
-    max-width: 110px !important;
+    max-width: 82px !important;
     height: auto !important;
 
     object-fit: contain !important;
@@ -3061,6 +3067,23 @@ setData(
           letter-spacing: 0.3px !important;
           white-space: nowrap !important;
         }
+
+        .temuan-page .profile-role-admin-developer {
+  background: #ffd21f !important;
+  color: #6b5200 !important;
+  box-shadow: 0 0 8px rgba(255, 210, 31, 0.75) !important;
+}
+
+.temuan-page .role-active-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #087f3f;
+  box-shadow: 0 0 5px rgba(8, 127, 63, 0.65);
+  vertical-align: middle;
+}
 
         .temuan-page .profile-button > .profile-chevron {
           margin-left: 2px !important;
@@ -3476,9 +3499,19 @@ setData(
                       "Pengguna"}
                   </strong>
 
-                  <span className="profile-role-badge">
-                    {currentUser?.role ||
-                      "-"}
+                  <span
+                    className={`profile-role-badge ${currentUser?.role === "ADMIN_DEVELOPER"
+                      ? "profile-role-admin-developer"
+                      : ""
+                      }`}
+                  >
+                    {currentUser?.role === "ADMIN_DEVELOPER" && (
+                      <span className="role-active-dot" />
+                    )}
+
+                    {currentUser?.role === "ADMIN_DEVELOPER"
+                      ? "ADMIN DEVELOPER"
+                      : currentUser?.role || "-"}
                   </span>
                 </span>
 
@@ -3546,15 +3579,16 @@ setData(
                     </span>
 
                     <span
-                      className={`role-badge ${
-                        currentUser?.role ===
-                        "KABAG"
+                      className={`role-badge ${currentUser?.role === "ADMIN_DEVELOPER"
+                        ? "role-admin-developer"
+                        : currentUser?.role === "KABAG"
                           ? "role-kabag"
                           : "role-kasie"
-                      }`}
+                        }`}
                     >
-                      {currentUser?.role ||
-                        "-"}
+                      {currentUser?.role === "ADMIN_DEVELOPER"
+                        ? "ADMIN DEVELOPER"
+                        : currentUser?.role || "-"}
                     </span>
                   </div>
 
@@ -3999,14 +4033,14 @@ setData(
 
                             const nomor =
                               (page - 1) *
-                                perPage +
+                              perPage +
                               index +
                               1;
 
                             const itemStatus =
                               String(
                                 item?.status_temuan ||
-                                  "OPEN"
+                                "OPEN"
                               ).toUpperCase();
                             const detailButtonClass =
                               itemStatus === "CLOSE"
@@ -4077,12 +4111,11 @@ setData(
 
                                 <td>
                                   <span
-                                    className={`status-badge ${
-                                      itemStatus ===
+                                    className={`status-badge ${itemStatus ===
                                       "CLOSE"
-                                        ? "status-close"
-                                        : "status-open"
-                                    }`}
+                                      ? "status-close"
+                                      : "status-open"
+                                      }`}
                                   >
                                     {itemStatus}
                                   </span>
@@ -4133,29 +4166,29 @@ setData(
 
                                     {itemStatus !==
                                       "CLOSE" && (
-                                      <button
-                                        type="button"
-                                        className="icon-btn"
-                                        title="Tindak Lanjut / Close"
-                                        onClick={() =>
-                                          bukaClose(
-                                            item
-                                          )
-                                        }
-                                      >
-                                        <svg
-                                          viewBox="0 0 24 24"
+                                        <button
+                                          type="button"
+                                          className="icon-btn"
+                                          title="Tindak Lanjut / Close"
+                                          onClick={() =>
+                                            bukaClose(
+                                              item
+                                            )
+                                          }
                                         >
-                                          <path
-                                            d="M12 3v18M3 12h18"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                          />
-                                        </svg>
-                                      </button>
-                                    )}
+                                          <svg
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              d="M12 3v18M3 12h18"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                            />
+                                          </svg>
+                                        </button>
+                                      )}
 
                                   </div>
 
@@ -4180,11 +4213,11 @@ setData(
                   <div>
                     Menampilkan{" "}
                     {filteredData.length ===
-                    0
+                      0
                       ? 0
                       : (page - 1) *
-                          perPage +
-                        1}{" "}
+                      perPage +
+                      1}{" "}
                     -{" "}
                     {Math.min(
                       page * perPage,
@@ -4234,12 +4267,11 @@ setData(
                               pageNumber
                             }
                             type="button"
-                            className={`page-btn ${
-                              page ===
+                            className={`page-btn ${page ===
                               pageNumber
-                                ? "active"
-                                : ""
-                            }`}
+                              ? "active"
+                              : ""
+                              }`}
                             onClick={() =>
                               setPage(
                                 pageNumber
@@ -4337,480 +4369,479 @@ setData(
                 >
                   <aside className="side-column">
 
-                {/* ==================================================
+                    {/* ==================================================
                     DETAIL TEMUAN
                 ================================================== */}
 
-                {detailOpen && (
-                  <section className="side-card">
+                    {detailOpen && (
+                      <section className="side-card">
 
-                    <div className="side-title-row">
+                        <div className="side-title-row">
 
-                      <h3 className="side-title">
-                        Detail Temuan
-                      </h3>
+                          <h3 className="side-title">
+                            Detail Temuan
+                          </h3>
 
-                      <button
-                        type="button"
-                        className="close-x"
-                        onClick={
-                          tutupDetail
-                        }
-                      >
-                        ×
-                      </button>
+                          <button
+                            type="button"
+                            className="close-x"
+                            onClick={
+                              tutupDetail
+                            }
+                          >
+                            ×
+                          </button>
 
-                    </div>
+                        </div>
 
-                    <div className="detail-top">
+                        <div className="detail-top">
 
-                      <span className="finding-number">
-                        #{String(
-                          selectedTemuan.id_temuan
-                        )}
-                      </span>
+                          <span className="finding-number">
+                            #{String(
+                              selectedTemuan.id_temuan
+                            )}
+                          </span>
 
-                      <span
-                        className={`status-badge ${
-                          String(
-                            selectedTemuan.status_temuan ||
+                          <span
+                            className={`status-badge ${String(
+                              selectedTemuan.status_temuan ||
                               "OPEN"
-                          ).toUpperCase() ===
-                          "CLOSE"
-                            ? "status-close"
-                            : "status-open"
-                        }`}
-                      >
-                        {String(
-                          selectedTemuan.status_temuan ||
-                            "OPEN"
-                        ).toUpperCase()}
-                      </span>
-
-                    </div>
-
-                    <div className="detail-grid">
-
-                      <span className="label">
-                        Tanggal Temuan
-                      </span>
-
-                      <span className="value">
-                        :
-                        {" "}
-                        {formatTanggal(
-                          selectedTemuan.tanggal_temuan
-                        )}
-                      </span>
-
-                      <span className="label">
-                        Wilayah
-                      </span>
-
-                      <span className="value">
-                        :
-                        {" "}
-                        {wilayahLabel(
-                          selectedTemuan
-                        )}
-                      </span>
-
-                      <span className="label">
-                        Lokasi
-                      </span>
-
-                      <span className="value">
-                        :
-                        {" "}
-                        {selectedTemuan
-                          ?.master_lokasi
-                          ?.nama_lokasi ||
-                          "-"}
-                      </span>
-
-                      <span className="label">
-                        Grup Temuan
-                      </span>
-
-                      <span className="value">
-                        :
-                        {" "}
-                        {selectedTemuan
-                          ?.master_grup_temuan
-                          ?.nama_grup ||
-                          "-"}
-                      </span>
-
-                      <span className="label">
-                        Aktivitas
-                      </span>
-
-                      <span className="value">
-                        :
-                        {" "}
-                        {selectedTemuan
-                          ?.master_aktivitas
-                          ?.nama_aktivitas ||
-                          "-"}
-                      </span>
-
-                      <span className="label">
-                        Mandor
-                      </span>
-
-                      <span className="value">
-                        :
-                        {" "}
-                        {selectedTemuan
-                          ?.master_mandor
-                          ?.nama_mandor ||
-                          "-"}
-                      </span>
-
-                      <span className="label">
-                        Inspector
-                      </span>
-
-                      <span className="value">
-                        :
-                        {" "}
-                        {selectedTemuan?.task_quiz?.inspector_names?.join(", ") ||
-                          selectedTemuan?.task_quiz?.inspector_ids?.join(", ") ||
-                          "-"}
-                      </span>
-
-                    </div>
-
-                    <div className="detail-description">
-
-                      <h4>
-                        Deskripsi Temuan
-                      </h4>
-
-                      <p>
-                        {selectedTemuan?.deskripsi ||
-                          "Tidak ada deskripsi."}
-                      </p>
-
-                    </div>
-
-                    <div>
-
-                      <div className="photo-title">
-                        Foto Temuan (Saat Inspeksi)
-                      </div>
-
-                      <div className="photo-box">
-
-                        {selectedTemuan?.foto_url ? (
-                          <img
-  src={
-    selectedTemuan.foto_url
-      ? selectedTemuan.foto_url.startsWith("/")
-        ? selectedTemuan.foto_url
-        : `/${selectedTemuan.foto_url}`
-      : ""
-  }
-  alt="Foto temuan"
-  onError={(e) => {
-    e.currentTarget.style.display = "none";
-  }}
-/>
-                        ) : (
-                          <div className="no-photo">
-                            Tidak ada foto temuan.
-                          </div>
-                        )}
-
-                      </div>
-
-                    </div>
-
-                    {String(
-                      selectedTemuan.status_temuan ||
-                        "OPEN"
-                    ).toUpperCase() ===
-                      "CLOSE" && (
-                      <div
-                        style={{
-                          marginTop: 12,
-                        }}
-                      >
-
-                        <div className="photo-title">
-                          Foto Setelah Perbaikan
-                        </div>
-
-                        <div className="photo-box">
-
-                          {selectedTemuan
-                            .foto_close_url ? (
-                            <img
-                              src={
-                                selectedTemuan.foto_close_url
-                              }
-                              alt="Foto close temuan"
-                            />
-                          ) : (
-                            <div className="no-photo">
-                              Tidak ada foto close.
-                            </div>
-                          )}
-
-                        </div>
-
-                      </div>
-                    )}
-
-                    <div className="side-actions">
-
-                      <button
-                        type="button"
-                        className="side-action"
-                        onClick={
-                          tutupDetail
-                        }
-                      >
-                        Tutup
-                      </button>
-
-                      {String(
-                        selectedTemuan.status_temuan ||
-                          "OPEN"
-                      ).toUpperCase() !==
-                        "CLOSE" && (
-                        <button
-                          type="button"
-                          className="side-action primary"
-                          onClick={() =>
-                            bukaClose(
-                              selectedTemuan
-                            )
-                          }
-                        >
-                          Tindak Lanjut /
-                          Close Temuan
-                        </button>
-                      )}
-
-                    </div>
-
-                  </section>
-                )}
-
-                {/* ==================================================
-                    CLOSE FORM
-                ================================================== */}
-
-                {closeOpen &&
-                  String(
-                    selectedTemuan.status_temuan ||
-                      "OPEN"
-                  ).toUpperCase() !==
-                    "CLOSE" && (
-                    <section className="close-card">
-
-                      <div className="side-title-row">
-
-                        <h3 className="side-title">
-                          Tindak Lanjut / Close Temuan
-                        </h3>
-
-                        <button
-                          type="button"
-                          className="close-x"
-                          onClick={() =>
-                            setCloseOpen(
-                              false
-                            )
-                          }
-                        >
-                          ×
-                        </button>
-
-                      </div>
-
-                      {closeError && (
-                        <div className="error-box">
-                          {closeError}
-                        </div>
-                      )}
-
-                      {closeSuccess && (
-                        <div className="success-box">
-                          {closeSuccess}
-                        </div>
-                      )}
-
-                      <label className="close-label">
-                        Tindak Lanjut / Keterangan
-                      </label>
-
-                      <textarea
-                        className="close-textarea"
-                        value={
-                          keteranganClose
-                        }
-                        onChange={(e) =>
-                          setKeteranganClose(
-                            e.target.value
-                          )
-                        }
-                        placeholder="Jelaskan tindak lanjut/perbaikan yang telah dilakukan..."
-                      />
-
-                      <div
-                        style={{
-                          marginTop: 13,
-                        }}
-                      >
-
-                        <label className="close-label">
-                          Foto Setelah Perbaikan
-                          (Foto Close)
-                        </label>
-
-                        <div className="upload-row">
-
-                          <input
-                            ref={
-                              fileInputRef
-                            }
-                            type="file"
-                            accept="image/jpeg,image/jpg,image/png,image/webp"
-                            onChange={
-                              handleFotoClose
-                            }
-                            style={{
-                              display:
-                                "none",
-                            }}
-                          />
-
-                          <button
-                            type="button"
-                            className="upload-button"
-                            onClick={() =>
-                              fileInputRef.current?.click()
-                            }
+                            ).toUpperCase() ===
+                              "CLOSE"
+                              ? "status-close"
+                              : "status-open"
+                              }`}
                           >
-                            Pilih Foto
-                          </button>
-
-                          <input
-                            ref={
-                              cameraInputRef
-                            }
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={
-                              handleFotoClose
-                            }
-                            style={{
-                              display:
-                                "none",
-                            }}
-                          />
-
-                          <button
-                            type="button"
-                            className="upload-button"
-                            onClick={() =>
-                              cameraInputRef.current?.click()
-                            }
-                          >
-                            Buka Kamera
-                          </button>
-
-                          <span className="upload-name">
-                            {fotoCloseName ||
-                              "Belum ada foto dipilih"}
+                            {String(
+                              selectedTemuan.status_temuan ||
+                              "OPEN"
+                            ).toUpperCase()}
                           </span>
 
                         </div>
 
-                        <div className="file-help">
-                          * Format JPG, JPEG,
-                          PNG, WEBP. Maksimal 8MB
+                        <div className="detail-grid">
+
+                          <span className="label">
+                            Tanggal Temuan
+                          </span>
+
+                          <span className="value">
+                            :
+                            {" "}
+                            {formatTanggal(
+                              selectedTemuan.tanggal_temuan
+                            )}
+                          </span>
+
+                          <span className="label">
+                            Wilayah
+                          </span>
+
+                          <span className="value">
+                            :
+                            {" "}
+                            {wilayahLabel(
+                              selectedTemuan
+                            )}
+                          </span>
+
+                          <span className="label">
+                            Lokasi
+                          </span>
+
+                          <span className="value">
+                            :
+                            {" "}
+                            {selectedTemuan
+                              ?.master_lokasi
+                              ?.nama_lokasi ||
+                              "-"}
+                          </span>
+
+                          <span className="label">
+                            Grup Temuan
+                          </span>
+
+                          <span className="value">
+                            :
+                            {" "}
+                            {selectedTemuan
+                              ?.master_grup_temuan
+                              ?.nama_grup ||
+                              "-"}
+                          </span>
+
+                          <span className="label">
+                            Aktivitas
+                          </span>
+
+                          <span className="value">
+                            :
+                            {" "}
+                            {selectedTemuan
+                              ?.master_aktivitas
+                              ?.nama_aktivitas ||
+                              "-"}
+                          </span>
+
+                          <span className="label">
+                            Mandor
+                          </span>
+
+                          <span className="value">
+                            :
+                            {" "}
+                            {selectedTemuan
+                              ?.master_mandor
+                              ?.nama_mandor ||
+                              "-"}
+                          </span>
+
+                          <span className="label">
+                            Inspector
+                          </span>
+
+                          <span className="value">
+                            :
+                            {" "}
+                            {selectedTemuan?.task_quiz?.inspector_names?.join(", ") ||
+                              selectedTemuan?.task_quiz?.inspector_ids?.join(", ") ||
+                              "-"}
+                          </span>
+
                         </div>
 
-                        {fotoClose && (
-                          <div className="close-photo-preview">
+                        <div className="detail-description">
 
-                            <img
-                              src={fotoClose}
-                              alt="Preview foto close"
-                            />
+                          <h4>
+                            Deskripsi Temuan
+                          </h4>
+
+                          <p>
+                            {selectedTemuan?.deskripsi ||
+                              "Tidak ada deskripsi."}
+                          </p>
+
+                        </div>
+
+                        <div>
+
+                          <div className="photo-title">
+                            Foto Temuan (Saat Inspeksi)
+                          </div>
+
+                          <div className="photo-box">
+
+                            {selectedTemuan?.foto_url ? (
+                              <img
+                                src={
+                                  selectedTemuan.foto_url
+                                    ? selectedTemuan.foto_url.startsWith("/")
+                                      ? selectedTemuan.foto_url
+                                      : `/${selectedTemuan.foto_url}`
+                                    : ""
+                                }
+                                alt="Foto temuan"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="no-photo">
+                                Tidak ada foto temuan.
+                              </div>
+                            )}
+
+                          </div>
+
+                        </div>
+
+                        {String(
+                          selectedTemuan.status_temuan ||
+                          "OPEN"
+                        ).toUpperCase() ===
+                          "CLOSE" && (
+                            <div
+                              style={{
+                                marginTop: 12,
+                              }}
+                            >
+
+                              <div className="photo-title">
+                                Foto Setelah Perbaikan
+                              </div>
+
+                              <div className="photo-box">
+
+                                {selectedTemuan
+                                  .foto_close_url ? (
+                                  <img
+                                    src={
+                                      selectedTemuan.foto_close_url
+                                    }
+                                    alt="Foto close temuan"
+                                  />
+                                ) : (
+                                  <div className="no-photo">
+                                    Tidak ada foto close.
+                                  </div>
+                                )}
+
+                              </div>
+
+                            </div>
+                          )}
+
+                        <div className="side-actions">
+
+                          <button
+                            type="button"
+                            className="side-action"
+                            onClick={
+                              tutupDetail
+                            }
+                          >
+                            Tutup
+                          </button>
+
+                          {String(
+                            selectedTemuan.status_temuan ||
+                            "OPEN"
+                          ).toUpperCase() !==
+                            "CLOSE" && (
+                              <button
+                                type="button"
+                                className="side-action primary"
+                                onClick={() =>
+                                  bukaClose(
+                                    selectedTemuan
+                                  )
+                                }
+                              >
+                                Tindak Lanjut /
+                                Close Temuan
+                              </button>
+                            )}
+
+                        </div>
+
+                      </section>
+                    )}
+
+                    {/* ==================================================
+                    CLOSE FORM
+                ================================================== */}
+
+                    {closeOpen &&
+                      String(
+                        selectedTemuan.status_temuan ||
+                        "OPEN"
+                      ).toUpperCase() !==
+                      "CLOSE" && (
+                        <section className="close-card">
+
+                          <div className="side-title-row">
+
+                            <h3 className="side-title">
+                              Tindak Lanjut / Close Temuan
+                            </h3>
 
                             <button
                               type="button"
-                              className="close-photo-remove"
-                              onClick={() => {
-                                setFotoClose(
-                                  ""
-                                );
-
-                                setFotoCloseName(
-                                  ""
-                                );
-
-                                if (
-                                  fileInputRef.current
-                                ) {
-                                  fileInputRef.current.value =
-                                    "";
-                                }
-
-                                if (
-                                  cameraInputRef.current
-                                ) {
-                                  cameraInputRef.current.value =
-                                    "";
-                                }
-                              }}
+                              className="close-x"
+                              onClick={() =>
+                                setCloseOpen(
+                                  false
+                                )
+                              }
                             >
                               ×
                             </button>
 
                           </div>
-                        )}
 
-                      </div>
+                          {closeError && (
+                            <div className="error-box">
+                              {closeError}
+                            </div>
+                          )}
 
-                      <div className="close-form-actions">
+                          {closeSuccess && (
+                            <div className="success-box">
+                              {closeSuccess}
+                            </div>
+                          )}
 
-                        <button
-                          type="button"
-                          className="close-cancel"
-                          onClick={() =>
-                            setCloseOpen(
-                              false
-                            )
-                          }
-                        >
-                          Batal
-                        </button>
+                          <label className="close-label">
+                            Tindak Lanjut / Keterangan
+                          </label>
 
-                        <button
-                          type="button"
-                          className="close-save"
-                          disabled={
-                            closeLoading
-                          }
-                          onClick={
-                            simpanClose
-                          }
-                        >
-                          {closeLoading
-                            ? "Menyimpan..."
-                            : "Simpan & Close Temuan"}
-                        </button>
+                          <textarea
+                            className="close-textarea"
+                            value={
+                              keteranganClose
+                            }
+                            onChange={(e) =>
+                              setKeteranganClose(
+                                e.target.value
+                              )
+                            }
+                            placeholder="Jelaskan tindak lanjut/perbaikan yang telah dilakukan..."
+                          />
 
-                      </div>
+                          <div
+                            style={{
+                              marginTop: 13,
+                            }}
+                          >
 
-                    </section>
-                  )}
+                            <label className="close-label">
+                              Foto Setelah Perbaikan
+                              (Foto Close)
+                            </label>
+
+                            <div className="upload-row">
+
+                              <input
+                                ref={
+                                  fileInputRef
+                                }
+                                type="file"
+                                accept="image/jpeg,image/jpg,image/png,image/webp"
+                                onChange={
+                                  handleFotoClose
+                                }
+                                style={{
+                                  display:
+                                    "none",
+                                }}
+                              />
+
+                              <button
+                                type="button"
+                                className="upload-button"
+                                onClick={() =>
+                                  fileInputRef.current?.click()
+                                }
+                              >
+                                Pilih Foto
+                              </button>
+
+                              <input
+                                ref={
+                                  cameraInputRef
+                                }
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={
+                                  handleFotoClose
+                                }
+                                style={{
+                                  display:
+                                    "none",
+                                }}
+                              />
+
+                              <button
+                                type="button"
+                                className="upload-button"
+                                onClick={() =>
+                                  cameraInputRef.current?.click()
+                                }
+                              >
+                                Buka Kamera
+                              </button>
+
+                              <span className="upload-name">
+                                {fotoCloseName ||
+                                  "Belum ada foto dipilih"}
+                              </span>
+
+                            </div>
+
+                            <div className="file-help">
+                              * Format JPG, JPEG,
+                              PNG, WEBP. Maksimal 8MB
+                            </div>
+
+                            {fotoClose && (
+                              <div className="close-photo-preview">
+
+                                <img
+                                  src={fotoClose}
+                                  alt="Preview foto close"
+                                />
+
+                                <button
+                                  type="button"
+                                  className="close-photo-remove"
+                                  onClick={() => {
+                                    setFotoClose(
+                                      ""
+                                    );
+
+                                    setFotoCloseName(
+                                      ""
+                                    );
+
+                                    if (
+                                      fileInputRef.current
+                                    ) {
+                                      fileInputRef.current.value =
+                                        "";
+                                    }
+
+                                    if (
+                                      cameraInputRef.current
+                                    ) {
+                                      cameraInputRef.current.value =
+                                        "";
+                                    }
+                                  }}
+                                >
+                                  ×
+                                </button>
+
+                              </div>
+                            )}
+
+                          </div>
+
+                          <div className="close-form-actions">
+
+                            <button
+                              type="button"
+                              className="close-cancel"
+                              onClick={() =>
+                                setCloseOpen(
+                                  false
+                                )
+                              }
+                            >
+                              Batal
+                            </button>
+
+                            <button
+                              type="button"
+                              className="close-save"
+                              disabled={
+                                closeLoading
+                              }
+                              onClick={
+                                simpanClose
+                              }
+                            >
+                              {closeLoading
+                                ? "Menyimpan..."
+                                : "Simpan & Close Temuan"}
+                            </button>
+
+                          </div>
+
+                        </section>
+                      )}
 
                   </aside>
                 </div>

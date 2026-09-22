@@ -136,7 +136,7 @@ export default function Inspeksi() {
       if (stored) {
         setCurrentUser(JSON.parse(stored));
       }
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function Inspeksi() {
           setCurrentUser(result.user);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -195,11 +195,11 @@ export default function Inspeksi() {
     } finally {
       try {
         localStorage.removeItem(DRAFT_KEY);
-      } catch {}
+      } catch { }
 
       try {
         sessionStorage.clear();
-      } catch {}
+      } catch { }
 
       window.location.replace("/login");
     }
@@ -260,8 +260,8 @@ export default function Inspeksi() {
         id_inspector: Array.isArray(formDraft.id_inspector)
           ? formDraft.id_inspector
           : formDraft.id_inspector
-          ? [String(formDraft.id_inspector)]
-          : [],
+            ? [String(formDraft.id_inspector)]
+            : [],
       }));
 
       if (Array.isArray(draftTemuan)) {
@@ -296,7 +296,7 @@ export default function Inspeksi() {
           fotoError: "",
         });
       }
-    } catch {}
+    } catch { }
   }, []);
 
   /* =====================================================
@@ -333,7 +333,7 @@ export default function Inspeksi() {
         DRAFT_KEY,
         JSON.stringify(draft)
       );
-    } catch {}
+    } catch { }
   }, [f, selectedTemuan, titikTersimpan]);
 
   /* =====================================================
@@ -344,111 +344,111 @@ export default function Inspeksi() {
    LOAD MASTER
 ===================================================== */
 
-useEffect(() => {
-  async function loadMasterAwal() {
-    try {
-      setLoadingAwal(true);
-      setErr("");
+  useEffect(() => {
+    async function loadMasterAwal() {
+      try {
+        setLoadingAwal(true);
+        setErr("");
 
-      const [
-        aktivitas,
-        grup,
-        wilayah,
-        mandor,
-        inspector,
-      ] = await Promise.all([
-        ambilJson("/api/master/aktivitas"),
-        ambilJson("/api/master/grup-temuan"),
-        ambilJson("/api/master/wilayah"),
-        ambilJson("/api/master/mandor"),
-        ambilJson("/api/master/pic"),
-      ]);
+        const [
+          aktivitas,
+          grup,
+          wilayah,
+          mandor,
+          inspector,
+        ] = await Promise.all([
+          ambilJson("/api/master/aktivitas"),
+          ambilJson("/api/master/grup-temuan"),
+          ambilJson("/api/master/wilayah"),
+          ambilJson("/api/master/mandor"),
+          ambilJson("/api/master/pic"),
+        ]);
 
-      setMaster((old) => ({
-        ...old,
-        aktivitas,
-        grup,
-        wilayah,
-        mandor,
-        inspector: Array.isArray(inspector)
-          ? inspector
-          : inspector?.data || [],
-      }));
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoadingAwal(false);
+        setMaster((old) => ({
+          ...old,
+          aktivitas,
+          grup,
+          wilayah,
+          mandor,
+          inspector: Array.isArray(inspector)
+            ? inspector
+            : inspector?.data || [],
+        }));
+      } catch (e) {
+        setErr(e.message);
+      } finally {
+        setLoadingAwal(false);
+      }
     }
-  }
 
-  loadMasterAwal();
-}, []);
+    loadMasterAwal();
+  }, []);
 
   /* =====================================================
      LOAD LOKASI BERDASARKAN WILAYAH
   ===================================================== */
 
- /* =====================================================
-   LOAD LOKASI BERDASARKAN WILAYAH
-===================================================== */
+  /* =====================================================
+    LOAD LOKASI BERDASARKAN WILAYAH
+ ===================================================== */
 
-useEffect(() => {
-  if (!f.no_wilayah) {
-    setMaster((old) => ({
-      ...old,
-      lokasi: [],
-    }));
-
-    setF((old) => ({
-      ...old,
-      id_lokasi: "",
-    }));
-
-    return;
-  }
-
-  async function loadLokasi() {
-    try {
-      setLoadingWilayahData(true);
-      setErr("");
+  useEffect(() => {
+    if (!f.no_wilayah) {
+      setMaster((old) => ({
+        ...old,
+        lokasi: [],
+      }));
 
       setF((old) => ({
         ...old,
         id_lokasi: "",
       }));
 
-      const [lokasi, inspector] = await Promise.all([
-        ambilJson(
-          `/api/master/lokasi?noWilayah=${f.no_wilayah}`
-        ),
-        ambilJson(
-          `/api/master/pic?noWilayah=${f.no_wilayah}`
-        ),
-      ]);
-
-      setMaster((old) => ({
-        ...old,
-        lokasi: Array.isArray(lokasi)
-          ? lokasi
-          : lokasi?.data || [],
-        inspector: Array.isArray(inspector)
-          ? inspector
-          : inspector?.data || [],
-      }));
-    } catch (e) {
-      setErr(e.message);
-
-      setMaster((old) => ({
-        ...old,
-        lokasi: [],
-      }));
-    } finally {
-      setLoadingWilayahData(false);
+      return;
     }
-  }
 
-  loadLokasi();
-}, [f.no_wilayah]);
+    async function loadLokasi() {
+      try {
+        setLoadingWilayahData(true);
+        setErr("");
+
+        setF((old) => ({
+          ...old,
+          id_lokasi: "",
+        }));
+
+        const [lokasi, inspector] = await Promise.all([
+          ambilJson(
+            `/api/master/lokasi?noWilayah=${f.no_wilayah}`
+          ),
+          ambilJson(
+            `/api/master/pic?noWilayah=${f.no_wilayah}`
+          ),
+        ]);
+
+        setMaster((old) => ({
+          ...old,
+          lokasi: Array.isArray(lokasi)
+            ? lokasi
+            : lokasi?.data || [],
+          inspector: Array.isArray(inspector)
+            ? inspector
+            : inspector?.data || [],
+        }));
+      } catch (e) {
+        setErr(e.message);
+
+        setMaster((old) => ({
+          ...old,
+          lokasi: [],
+        }));
+      } finally {
+        setLoadingWilayahData(false);
+      }
+    }
+
+    loadLokasi();
+  }, [f.no_wilayah]);
   /* =====================================================
      GPS OTOMATIS
   ===================================================== */
@@ -469,7 +469,7 @@ useEffect(() => {
           longitude: p.coords.longitude.toFixed(7),
         }));
       },
-      () => {},
+      () => { },
       {
         enableHighAccuracy: true,
         timeout: 10000,
@@ -608,7 +608,7 @@ useEffect(() => {
     } catch (error) {
       setErr(
         error?.message ||
-          "Draft inspeksi gagal disimpan."
+        "Draft inspeksi gagal disimpan."
       );
     }
   }
@@ -690,9 +690,9 @@ useEffect(() => {
       current.map((item, idx) =>
         idx === index
           ? {
-              ...item,
-              [key]: value,
-            }
+            ...item,
+            [key]: value,
+          }
           : item
       )
     );
@@ -707,9 +707,9 @@ useEffect(() => {
       current.map((item, idx) =>
         idx === index
           ? {
-              ...item,
-              fotoError: "",
-            }
+            ...item,
+            fotoError: "",
+          }
           : item
       )
     );
@@ -721,11 +721,11 @@ useEffect(() => {
         current.map((item, idx) =>
           idx === index
             ? {
-                ...item,
-                fotoDataUrl: dataUrl,
-                fotoPreview: dataUrl,
-                fotoError: "",
-              }
+              ...item,
+              fotoDataUrl: dataUrl,
+              fotoPreview: dataUrl,
+              fotoError: "",
+            }
             : item
         )
       );
@@ -734,9 +734,9 @@ useEffect(() => {
         current.map((item, idx) =>
           idx === index
             ? {
-                ...item,
-                fotoError: error.message,
-              }
+              ...item,
+              fotoError: error.message,
+            }
             : item
         )
       );
@@ -750,11 +750,11 @@ useEffect(() => {
       current.map((item, idx) =>
         idx === index
           ? {
-              ...item,
-              fotoDataUrl: "",
-              fotoPreview: "",
-              fotoError: "",
-            }
+            ...item,
+            fotoDataUrl: "",
+            fotoPreview: "",
+            fotoError: "",
+          }
           : item
       )
     );
@@ -916,7 +916,7 @@ useEffect(() => {
       if (!r.ok) {
         throw new Error(
           d.error ||
-            "Gagal menghapus aktivitas"
+          "Gagal menghapus aktivitas"
         );
       }
 
@@ -1185,7 +1185,7 @@ useEffect(() => {
         if (!r.ok) {
           throw new Error(
             d.error ||
-              "Gagal menyimpan hasil inspeksi"
+            "Gagal menyimpan hasil inspeksi"
           );
         }
 
@@ -1197,7 +1197,7 @@ useEffect(() => {
           localStorage.removeItem(
             DRAFT_KEY
           );
-        } catch {}
+        } catch { }
 
         setF(FORM_AWAL);
 
@@ -1339,7 +1339,7 @@ useEffect(() => {
         if (!r.ok) {
           throw new Error(
             d.error ||
-              `Gagal menyimpan grup temuan "${item.nama_grup}"`
+            `Gagal menyimpan grup temuan "${item.nama_grup}"`
           );
         }
 
@@ -1359,7 +1359,7 @@ useEffect(() => {
           new Date(
             f.tanggal_temuan
           ).getTime() +
-            7 * 86400000
+          7 * 86400000
         )
           .toISOString()
           .slice(0, 10);
@@ -1373,7 +1373,7 @@ useEffect(() => {
         localStorage.removeItem(
           DRAFT_KEY
         );
-      } catch {}
+      } catch { }
 
       setF(FORM_AWAL);
 
@@ -1486,8 +1486,20 @@ useEffect(() => {
                   {currentUser.nama_lengkap || "Pengguna"}
                 </strong>
 
-                <small>
-                  {currentUser.role || "-"}
+                <small
+                  className={
+                    roleCode === "ADMIN_DEVELOPER"
+                      ? "profile-role-admin-developer"
+                      : ""
+                  }
+                >
+                  {roleCode === "ADMIN_DEVELOPER" && (
+                    <span className="role-active-dot" />
+                  )}
+
+                  {roleCode === "ADMIN_DEVELOPER"
+                    ? "ADMIN DEVELOPER"
+                    : currentUser.role || "-"}
                 </small>
 
               </span>
@@ -1552,13 +1564,16 @@ useEffect(() => {
                   <span className="profile-label">Role</span>
 
                   <span
-                    className={`role-badge ${
-                      currentUser.role === "KABAG"
+                    className={`role-badge ${roleCode === "ADMIN_DEVELOPER"
+                      ? "profile-role-admin-developer"
+                      : currentUser.role === "KABAG"
                         ? "role-kabag"
                         : "role-kasie"
-                    }`}
+                      }`}
                   >
-                    {currentUser.role || "-"}
+                    {roleCode === "ADMIN_DEVELOPER"
+                      ? "ADMIN DEVELOPER"
+                      : currentUser.role || "-"}
                   </span>
 
                 </div>
@@ -1609,7 +1624,7 @@ useEffect(() => {
             <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
             </svg>
-              <span className="nav-logout-label">{loggingOut ? "Keluar..." : "Logout"}</span>
+            <span className="nav-logout-label">{loggingOut ? "Keluar..." : "Logout"}</span>
           </button>
 
           {canUsers && (
@@ -1642,14 +1657,13 @@ useEffect(() => {
 
         </nav>
 
-              <div className="mobile-menu-wrapper">
+        <div className="mobile-menu-wrapper">
           <button
             type="button"
-            className={`mobile-menu-button ${
-              showMobileNav
-                ? "mobile-menu-button-open"
-                : ""
-            }`}
+            className={`mobile-menu-button ${showMobileNav
+              ? "mobile-menu-button-open"
+              : ""
+              }`}
             onClick={() =>
               setShowMobileNav((x) => !x)
             }
@@ -1834,8 +1848,8 @@ useEffect(() => {
                 !f.no_wilayah
                   ? "Pilih wilayah terlebih dahulu..."
                   : loadingWilayahData
-                  ? "Memuat lokasi..."
-                  : "Cari lokasi..."
+                    ? "Memuat lokasi..."
+                    : "Cari lokasi..."
               }
             />
 
@@ -1985,30 +1999,30 @@ useEffect(() => {
 
               <div className="selectrow">
 
-               <SearchSelect
-  label=""
-  value={
-    f.id_inspector
-  }
-  multiple
-  onChange={(x) =>
-    set(
-      "id_inspector",
-      x
-    )
-  }
-  options={
-    master.inspector
-  }
-  valueKey="id_pic"
-  labelKey="nama_pic"
-  disabled={loadingAwal}
-  placeholder={
-    loadingAwal
-      ? "Memuat inspector..."
-      : "Cari inspector..."
-  }
-/>
+                <SearchSelect
+                  label=""
+                  value={
+                    f.id_inspector
+                  }
+                  multiple
+                  onChange={(x) =>
+                    set(
+                      "id_inspector",
+                      x
+                    )
+                  }
+                  options={
+                    master.inspector
+                  }
+                  valueKey="id_pic"
+                  labelKey="nama_pic"
+                  disabled={loadingAwal}
+                  placeholder={
+                    loadingAwal
+                      ? "Memuat inspector..."
+                      : "Cari inspector..."
+                  }
+                />
 
                 <button
                   type="button"
@@ -2130,12 +2144,11 @@ useEffect(() => {
                 <div className="inspection-options">
 
                   <label
-                    className={`inspection-option ${
-                      f.hasil_inspeksi ===
+                    className={`inspection-option ${f.hasil_inspeksi ===
                       "TIDAK_ADA_TEMUAN"
-                        ? "selected"
-                        : ""
-                    }`}
+                      ? "selected"
+                      : ""
+                      }`}
                   >
 
                     <input
@@ -2155,7 +2168,7 @@ useEffect(() => {
 
                     <span className="inspection-radio">
                       {f.hasil_inspeksi ===
-                      "TIDAK_ADA_TEMUAN"
+                        "TIDAK_ADA_TEMUAN"
                         ? "✓"
                         : ""}
                     </span>
@@ -2179,12 +2192,11 @@ useEffect(() => {
                   </label>
 
                   <label
-                    className={`inspection-option ${
-                      f.hasil_inspeksi ===
+                    className={`inspection-option ${f.hasil_inspeksi ===
                       "ADA_TEMUAN"
-                        ? "selected"
-                        : ""
-                    }`}
+                      ? "selected"
+                      : ""
+                      }`}
                   >
 
                     <input
@@ -2204,7 +2216,7 @@ useEffect(() => {
 
                     <span className="inspection-radio">
                       {f.hasil_inspeksi ===
-                      "ADA_TEMUAN"
+                        "ADA_TEMUAN"
                         ? "✓"
                         : ""}
                     </span>
@@ -2241,153 +2253,153 @@ useEffect(() => {
             {f.hasil_inspeksi ===
               "TIDAK_ADA_TEMUAN" && (
 
-              <div className="field full">
+                <div className="field full">
 
-                <div className="inspection-proof">
+                  <div className="inspection-proof">
 
-                  <div className="inspection-proof-head">
+                    <div className="inspection-proof-head">
 
-                    <div>
+                      <div>
 
-                      <label>
-                        Deskripsi Inspeksi
-                        <span className="required-mark">
-                          *
-                        </span>
-                      </label>
+                        <label>
+                          Deskripsi Inspeksi
+                          <span className="required-mark">
+                            *
+                          </span>
+                        </label>
 
-                    </div>
+                      </div>
 
-                    <span className="inspection-status selesai">
-                      SELESAI
-                    </span>
-
-                  </div>
-
-                  <div className="inspection-description-box">
-                    <textarea
-                      rows="4"
-                      value={f.deskripsi}
-                      onChange={(e) =>
-                        set("deskripsi", e.target.value)
-                      }
-                      placeholder="Jelaskan hasil inspeksi dan sosialisasi yang dilakukan..."
-                      required
-                    />
-                  </div>
-
-                  <div className="inspection-proof-head">
-
-                    <div>
-
-                      <label>
-                        Foto Bukti Inspeksi & Sosialisasi
-                        <span className="required-mark">
-                          *
-                        </span>
-                      </label>
+                      <span className="inspection-status selesai">
+                        SELESAI
+                      </span>
 
                     </div>
 
-                  </div>
-
-                  <div className="photo-box">
-
-                    <div className="photoactions">
-
-                      <button
-                        type="button"
-                        className="btn secondary"
-                        onClick={() =>
-                          bukaInputFotoInspeksi(
-                            "pilih"
-                          )
+                    <div className="inspection-description-box">
+                      <textarea
+                        rows="4"
+                        value={f.deskripsi}
+                        onChange={(e) =>
+                          set("deskripsi", e.target.value)
                         }
-                      >
-                        Pilih Foto
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={() =>
-                          bukaInputFotoInspeksi(
-                            "kamera"
-                          )
-                        }
-                      >
-                        Kamera
-                      </button>
-
-                      <input
-                        id="foto-inspeksi-pilih"
-                        hidden
-                        type="file"
-                        accept="image/*"
-                        onChange={
-                          onPilihFotoInspeksi
-                        }
+                        placeholder="Jelaskan hasil inspeksi dan sosialisasi yang dilakukan..."
+                        required
                       />
+                    </div>
 
-                      <input
-                        id="foto-inspeksi-kamera"
-                        hidden
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={
-                          onPilihFotoInspeksi
+                    <div className="inspection-proof-head">
+
+                      <div>
+
+                        <label>
+                          Foto Bukti Inspeksi & Sosialisasi
+                          <span className="required-mark">
+                            *
+                          </span>
+                        </label>
+
+                      </div>
+
+                    </div>
+
+                    <div className="photo-box">
+
+                      <div className="photoactions">
+
+                        <button
+                          type="button"
+                          className="btn secondary"
+                          onClick={() =>
+                            bukaInputFotoInspeksi(
+                              "pilih"
+                            )
+                          }
+                        >
+                          Pilih Foto
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() =>
+                            bukaInputFotoInspeksi(
+                              "kamera"
+                            )
+                          }
+                        >
+                          Kamera
+                        </button>
+
+                        <input
+                          id="foto-inspeksi-pilih"
+                          hidden
+                          type="file"
+                          accept="image/*"
+                          onChange={
+                            onPilihFotoInspeksi
+                          }
+                        />
+
+                        <input
+                          id="foto-inspeksi-kamera"
+                          hidden
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={
+                            onPilihFotoInspeksi
+                          }
+                        />
+
+                      </div>
+
+                      <div className="photo-help">
+                        Wajib mengunggah minimal satu foto sebagai bukti inspeksi dan sosialisasi.
+                      </div>
+
+                    </div>
+
+                    {fotoInspeksi.fotoError && (
+
+                      <div className="error small">
+                        {
+                          fotoInspeksi.fotoError
                         }
-                      />
+                      </div>
 
-                    </div>
+                    )}
 
-                    <div className="photo-help">
-                      Wajib mengunggah minimal satu foto sebagai bukti inspeksi dan sosialisasi.
-                    </div>
+                    {fotoInspeksi.fotoPreview && (
+
+                      <div className="fotopreview">
+
+                        <img
+                          src={
+                            fotoInspeksi.fotoPreview
+                          }
+                          alt="Pratinjau foto bukti inspeksi"
+                        />
+
+                        <button
+                          type="button"
+                          className="btn secondary small"
+                          onClick={
+                            hapusFotoInspeksi
+                          }
+                        >
+                          Hapus Foto
+                        </button>
+
+                      </div>
+
+                    )}
 
                   </div>
-
-                  {fotoInspeksi.fotoError && (
-
-                    <div className="error small">
-                      {
-                        fotoInspeksi.fotoError
-                      }
-                    </div>
-
-                  )}
-
-                  {fotoInspeksi.fotoPreview && (
-
-                    <div className="fotopreview">
-
-                      <img
-                        src={
-                          fotoInspeksi.fotoPreview
-                        }
-                        alt="Pratinjau foto bukti inspeksi"
-                      />
-
-                      <button
-                        type="button"
-                        className="btn secondary small"
-                        onClick={
-                          hapusFotoInspeksi
-                        }
-                      >
-                        Hapus Foto
-                      </button>
-
-                    </div>
-
-                  )}
 
                 </div>
 
-              </div>
-
-            )}
+              )}
 
             {/* =====================================================
                 CHECKLIST GRUP TEMUAN
@@ -2397,404 +2409,403 @@ useEffect(() => {
             {f.hasil_inspeksi ===
               "ADA_TEMUAN" && (
 
-              <div className="field full">
+                <div className="field full">
 
-                <div className="temuan-workspace">
+                  <div className="temuan-workspace">
 
-                  <div className="temuan-selector-panel">
+                    <div className="temuan-selector-panel">
 
-                    <div className="temuan-head">
+                      <div className="temuan-head">
 
-                      <div>
+                        <div>
 
-                        <label>
-                          Grup Temuan
-                        </label>
-
-                      </div>
-
-                      <div className="temuan-count">
-                        {selectedTemuan.length} dipilih
-                      </div>
-
-                    </div>
-
-                    <div className="grup-checklist">
-
-                      {master.grup.length === 0 ? (
-
-                        <div className="grup-empty">
-
-                          {loadingAwal
-                            ? "Memuat grup temuan..."
-                            : "Belum ada grup temuan."}
+                          <label>
+                            Grup Temuan
+                          </label>
 
                         </div>
 
-                      ) : (
+                        <div className="temuan-count">
+                          {selectedTemuan.length} dipilih
+                        </div>
 
-                        master.grup.map(
-                          (grup, grupIndex) => {
+                      </div>
 
-                            const selectedIndex =
-                              selectedTemuan.findIndex(
-                                (item) =>
-                                  String(
-                                    item.id_grup
-                                  ) ===
-                                  String(
-                                    grup.id_grup
-                                  )
-                              );
+                      <div className="grup-checklist">
 
-                            const checked =
-                              selectedIndex !== -1;
+                        {master.grup.length === 0 ? (
 
-                            const item =
-                              checked
-                                ? selectedTemuan[
-                                    selectedIndex
+                          <div className="grup-empty">
+
+                            {loadingAwal
+                              ? "Memuat grup temuan..."
+                              : "Belum ada grup temuan."}
+
+                          </div>
+
+                        ) : (
+
+                          master.grup.map(
+                            (grup, grupIndex) => {
+
+                              const selectedIndex =
+                                selectedTemuan.findIndex(
+                                  (item) =>
+                                    String(
+                                      item.id_grup
+                                    ) ===
+                                    String(
+                                      grup.id_grup
+                                    )
+                                );
+
+                              const checked =
+                                selectedIndex !== -1;
+
+                              const item =
+                                checked
+                                  ? selectedTemuan[
+                                  selectedIndex
                                   ]
-                                : null;
+                                  : null;
 
-                            const fotoTemuan =
-                              item?.fotoPreview ||
-                              item?.fotoDataUrl ||
-                              "";
+                              const fotoTemuan =
+                                item?.fotoPreview ||
+                                item?.fotoDataUrl ||
+                                "";
 
-                            return (
+                              return (
 
-                              <div
-                                className={`grup-item ${
-                                  checked
+                                <div
+                                  className={`grup-item ${checked
                                     ? "checked"
                                     : ""
-                                }`}
-                                key={
-                                  grup.id_grup
-                                }
-                              >
+                                    }`}
+                                  key={
+                                    grup.id_grup
+                                  }
+                                >
 
-                                <label className="grup-check">
+                                  <label className="grup-check">
 
-                                  <input
-                                    type="checkbox"
-                                    checked={
-                                      checked
-                                    }
-                                    onChange={() =>
-                                      toggleGrupTemuan(
-                                        grup.id_grup
-                                      )
-                                    }
-                                  />
-
-                                  <span className="checkmark">
-                                    {checked
-                                      ? "✓"
-                                      : ""}
-                                  </span>
-
-                                  <span className="grup-check-text">
-
-                                    <strong>
-                                      {
-                                        grup.nama_grup
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        checked
                                       }
-                                    </strong>
+                                      onChange={() =>
+                                        toggleGrupTemuan(
+                                          grup.id_grup
+                                        )
+                                      }
+                                    />
 
-                                    <small>
+                                    <span className="checkmark">
                                       {checked
-                                        ? "Temuan dipilih — isi detail di bawah"
-                                        : "Klik untuk memilih"}
-                                    </small>
+                                        ? "✓"
+                                        : ""}
+                                    </span>
 
-                                  </span>
+                                    <span className="grup-check-text">
 
-                                </label>
+                                      <strong>
+                                        {
+                                          grup.nama_grup
+                                        }
+                                      </strong>
 
-                                {checked &&
-                                  item && (
+                                      <small>
+                                        {checked
+                                          ? "Temuan dipilih — isi detail di bawah"
+                                          : "Klik untuk memilih"}
+                                      </small>
 
-                                    <div className="temuan-card">
+                                    </span>
 
-                                      <div className="temuan-card-title">
+                                  </label>
 
-                                        <div className="temuan-number">
-                                          {grupIndex + 1}
-                                        </div>
+                                  {checked &&
+                                    item && (
 
-                                        <div>
+                                      <div className="temuan-card">
 
-                                          <strong>
-                                            {
-                                              item.nama_grup
-                                            }
-                                          </strong>
+                                        <div className="temuan-card-title">
 
-                                          <span>
-                                            Detail temuan
-                                          </span>
+                                          <div className="temuan-number">
+                                            {grupIndex + 1}
+                                          </div>
 
-                                        </div>
+                                          <div>
 
-                                        <button
-                                          type="button"
-                                          className="btn danger small"
-                                          onClick={() =>
-                                            toggleGrupTemuan(
-                                              item.id_grup
-                                            )
-                                          }
-                                        >
-                                          Hapus
-                                        </button>
-
-                                      </div>
-
-                                      <div className="temuan-card-body">
-
-                                        <div className="temuan-description">
-
-                                          <label>
-                                            Deskripsi Temuan
-                                            <span className="required-mark">
-                                              *
-                                            </span>
-                                          </label>
-
-                                          <textarea
-                                            rows="5"
-                                            value={
-                                              item.deskripsi
-                                            }
-                                            onChange={(e) =>
-                                              updateTemuan(
-                                                selectedIndex,
-                                                "deskripsi",
-                                                e.target.value
-                                              )
-                                            }
-                                            placeholder={`Jelaskan kondisi temuan ${item.nama_grup}...`}
-                                            required
-                                          />
-
-                                        </div>
-
-                                        <div className="temuan-photo">
-
-                                          <label>
-                                            Foto Temuan
-                                            <span className="required-mark">
-                                              *
-                                            </span>
-                                          </label>
-
-                                          <div className="photo-box temuan-photo-box">
-
-                                            <div className="photoactions">
-
-                                              <button
-                                                type="button"
-                                                className="btn secondary"
-                                                onClick={() =>
-                                                  bukaInputFoto(
-                                                    selectedIndex,
-                                                    "pilih"
-                                                  )
-                                                }
-                                              >
-                                                Pilih Foto
-                                              </button>
-
-                                              <button
-                                                type="button"
-                                                className="btn"
-                                                onClick={() =>
-                                                  bukaInputFoto(
-                                                    selectedIndex,
-                                                    "kamera"
-                                                  )
-                                                }
-                                              >
-                                                Kamera
-                                              </button>
-
-                                              <input
-                                                id={`foto-temuan-pilih-${selectedIndex}`}
-                                                hidden
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) =>
-                                                  onPilihFotoTemuan(
-                                                    e,
-                                                    selectedIndex
-                                                  )
-                                                }
-                                              />
-
-                                              <input
-                                                id={`foto-temuan-kamera-${selectedIndex}`}
-                                                hidden
-                                                type="file"
-                                                accept="image/*"
-                                                capture="environment"
-                                                onChange={(e) =>
-                                                  onPilihFotoTemuan(
-                                                    e,
-                                                    selectedIndex
-                                                  )
-                                                }
-                                              />
-
-                                            </div>
-
-                                            <div className="photo-help">
-                                              Foto khusus untuk temuan{" "}
+                                            <strong>
                                               {
                                                 item.nama_grup
-                                              }.
-                                            </div>
+                                              }
+                                            </strong>
 
-                                            {fotoTemuan && (
-
-                                              <div className="fotopreview temuan-foto-preview">
-
-                                                <img
-                                                  src={fotoTemuan}
-                                                  alt={`Pratinjau foto ${item.nama_grup}`}
-                                                />
-
-                                                <button
-                                                  type="button"
-                                                  className="btn secondary small"
-                                                  onClick={() =>
-                                                    hapusFotoTemuan(
-                                                      selectedIndex
-                                                    )
-                                                  }
-                                                >
-                                                  Hapus Foto
-                                                </button>
-
-                                              </div>
-
-                                            )}
+                                            <span>
+                                              Detail temuan
+                                            </span>
 
                                           </div>
 
-                                          {item.fotoError && (
+                                          <button
+                                            type="button"
+                                            className="btn danger small"
+                                            onClick={() =>
+                                              toggleGrupTemuan(
+                                                item.id_grup
+                                              )
+                                            }
+                                          >
+                                            Hapus
+                                          </button>
 
-                                            <div className="error small">
-                                              {
-                                                item.fotoError
-                                              }
-                                            </div>
+                                        </div>
 
-                                          )}
+                                        <div className="temuan-card-body">
 
-                                          {/* STATUS OPEN / CLOSE */}
-
-                                          <div className="temuan-status-box">
+                                          <div className="temuan-description">
 
                                             <label>
-                                              Status Temuan
+                                              Deskripsi Temuan
                                               <span className="required-mark">
                                                 *
                                               </span>
                                             </label>
 
-                                            <div className="status-options">
+                                            <textarea
+                                              rows="5"
+                                              value={
+                                                item.deskripsi
+                                              }
+                                              onChange={(e) =>
+                                                updateTemuan(
+                                                  selectedIndex,
+                                                  "deskripsi",
+                                                  e.target.value
+                                                )
+                                              }
+                                              placeholder={`Jelaskan kondisi temuan ${item.nama_grup}...`}
+                                              required
+                                            />
 
-                                              <label
-                                                className={`status-option open ${
-                                                  item.status ===
-                                                  "OPEN"
-                                                    ? "selected"
-                                                    : ""
-                                                }`}
-                                              >
+                                          </div>
+
+                                          <div className="temuan-photo">
+
+                                            <label>
+                                              Foto Temuan
+                                              <span className="required-mark">
+                                                *
+                                              </span>
+                                            </label>
+
+                                            <div className="photo-box temuan-photo-box">
+
+                                              <div className="photoactions">
+
+                                                <button
+                                                  type="button"
+                                                  className="btn secondary"
+                                                  onClick={() =>
+                                                    bukaInputFoto(
+                                                      selectedIndex,
+                                                      "pilih"
+                                                    )
+                                                  }
+                                                >
+                                                  Pilih Foto
+                                                </button>
+
+                                                <button
+                                                  type="button"
+                                                  className="btn"
+                                                  onClick={() =>
+                                                    bukaInputFoto(
+                                                      selectedIndex,
+                                                      "kamera"
+                                                    )
+                                                  }
+                                                >
+                                                  Kamera
+                                                </button>
 
                                                 <input
-                                                  type="radio"
-                                                  name={`status-temuan-${selectedIndex}`}
-                                                  value="OPEN"
-                                                  checked={
-                                                    item.status ===
+                                                  id={`foto-temuan-pilih-${selectedIndex}`}
+                                                  hidden
+                                                  type="file"
+                                                  accept="image/*"
+                                                  onChange={(e) =>
+                                                    onPilihFotoTemuan(
+                                                      e,
+                                                      selectedIndex
+                                                    )
+                                                  }
+                                                />
+
+                                                <input
+                                                  id={`foto-temuan-kamera-${selectedIndex}`}
+                                                  hidden
+                                                  type="file"
+                                                  accept="image/*"
+                                                  capture="environment"
+                                                  onChange={(e) =>
+                                                    onPilihFotoTemuan(
+                                                      e,
+                                                      selectedIndex
+                                                    )
+                                                  }
+                                                />
+
+                                              </div>
+
+                                              <div className="photo-help">
+                                                Foto khusus untuk temuan{" "}
+                                                {
+                                                  item.nama_grup
+                                                }.
+                                              </div>
+
+                                              {fotoTemuan && (
+
+                                                <div className="fotopreview temuan-foto-preview">
+
+                                                  <img
+                                                    src={fotoTemuan}
+                                                    alt={`Pratinjau foto ${item.nama_grup}`}
+                                                  />
+
+                                                  <button
+                                                    type="button"
+                                                    className="btn secondary small"
+                                                    onClick={() =>
+                                                      hapusFotoTemuan(
+                                                        selectedIndex
+                                                      )
+                                                    }
+                                                  >
+                                                    Hapus Foto
+                                                  </button>
+
+                                                </div>
+
+                                              )}
+
+                                            </div>
+
+                                            {item.fotoError && (
+
+                                              <div className="error small">
+                                                {
+                                                  item.fotoError
+                                                }
+                                              </div>
+
+                                            )}
+
+                                            {/* STATUS OPEN / CLOSE */}
+
+                                            <div className="temuan-status-box">
+
+                                              <label>
+                                                Status Temuan
+                                                <span className="required-mark">
+                                                  *
+                                                </span>
+                                              </label>
+
+                                              <div className="status-options">
+
+                                                <label
+                                                  className={`status-option open ${item.status ===
                                                     "OPEN"
-                                                  }
-                                                  onChange={() =>
-                                                    updateTemuan(
-                                                      selectedIndex,
-                                                      "status",
-                                                      "OPEN"
-                                                    )
-                                                  }
-                                                />
-
-                                                <span className="status-radio">
-                                                  {item.status ===
-                                                  "OPEN"
-                                                    ? "✓"
-                                                    : ""}
-                                                </span>
-
-                                                <span>
-                                                  <strong>
-                                                    OPEN
-                                                  </strong>
-
-                                                  <small>
-                                                    Perlu tindak lanjut
-                                                  </small>
-                                                </span>
-
-                                              </label>
-
-                                              <label
-                                                className={`status-option close ${
-                                                  item.status ===
-                                                  "CLOSE"
                                                     ? "selected"
                                                     : ""
-                                                }`}
-                                              >
+                                                    }`}
+                                                >
 
-                                                <input
-                                                  type="radio"
-                                                  name={`status-temuan-${selectedIndex}`}
-                                                  value="CLOSE"
-                                                  checked={
-                                                    item.status ===
+                                                  <input
+                                                    type="radio"
+                                                    name={`status-temuan-${selectedIndex}`}
+                                                    value="OPEN"
+                                                    checked={
+                                                      item.status ===
+                                                      "OPEN"
+                                                    }
+                                                    onChange={() =>
+                                                      updateTemuan(
+                                                        selectedIndex,
+                                                        "status",
+                                                        "OPEN"
+                                                      )
+                                                    }
+                                                  />
+
+                                                  <span className="status-radio">
+                                                    {item.status ===
+                                                      "OPEN"
+                                                      ? "✓"
+                                                      : ""}
+                                                  </span>
+
+                                                  <span>
+                                                    <strong>
+                                                      OPEN
+                                                    </strong>
+
+                                                    <small>
+                                                      Perlu tindak lanjut
+                                                    </small>
+                                                  </span>
+
+                                                </label>
+
+                                                <label
+                                                  className={`status-option close ${item.status ===
                                                     "CLOSE"
-                                                  }
-                                                  onChange={() =>
-                                                    updateTemuan(
-                                                      selectedIndex,
-                                                      "status",
+                                                    ? "selected"
+                                                    : ""
+                                                    }`}
+                                                >
+
+                                                  <input
+                                                    type="radio"
+                                                    name={`status-temuan-${selectedIndex}`}
+                                                    value="CLOSE"
+                                                    checked={
+                                                      item.status ===
                                                       "CLOSE"
-                                                    )
-                                                  }
-                                                />
+                                                    }
+                                                    onChange={() =>
+                                                      updateTemuan(
+                                                        selectedIndex,
+                                                        "status",
+                                                        "CLOSE"
+                                                      )
+                                                    }
+                                                  />
 
-                                                <span className="status-radio">
-                                                  {item.status ===
-                                                  "CLOSE"
-                                                    ? "✓"
-                                                    : ""}
-                                                </span>
+                                                  <span className="status-radio">
+                                                    {item.status ===
+                                                      "CLOSE"
+                                                      ? "✓"
+                                                      : ""}
+                                                  </span>
 
-                                                <span>
-                                                  <strong>
-                                                    CLOSE
-                                                  </strong>
+                                                  <span>
+                                                    <strong>
+                                                      CLOSE
+                                                    </strong>
 
-                                                  <small>
-                                                    Sudah selesai
-                                                  </small>
-                                                </span>
+                                                    <small>
+                                                      Sudah selesai
+                                                    </small>
+                                                  </span>
 
-                                              </label>
+                                                </label>
+
+                                              </div>
 
                                             </div>
 
@@ -2804,17 +2815,17 @@ useEffect(() => {
 
                                       </div>
 
-                                    </div>
+                                    )}
 
-                                  )}
+                                </div>
 
-                              </div>
+                              );
+                            }
+                          )
 
-                            );
-                          }
-                        )
+                        )}
 
-                      )}
+                      </div>
 
                     </div>
 
@@ -2822,9 +2833,7 @@ useEffect(() => {
 
                 </div>
 
-              </div>
-
-            )}
+              )}
 
             {/* =====================================================
                 LOKASI & PETA
@@ -2837,7 +2846,7 @@ useEffect(() => {
               </label>
 
               {f.latitude &&
-              f.longitude ? (
+                f.longitude ? (
 
                 <div className="mapbox">
 
@@ -2893,12 +2902,10 @@ useEffect(() => {
                   <iframe
                     title="Preview lokasi inspeksi"
                     src={`https://www.google.com/maps?q=${encodeURIComponent(
-                      `${
-                        titikTersimpan.latitude ||
-                        f.latitude
-                      },${
-                        titikTersimpan.longitude ||
-                        f.longitude
+                      `${titikTersimpan.latitude ||
+                      f.latitude
+                      },${titikTersimpan.longitude ||
+                      f.longitude
                       }`
                     )}&z=17&output=embed`}
                     className="mapframe"
@@ -2961,7 +2968,7 @@ useEffect(() => {
 
                 <span>
                   {f.hasil_inspeksi ===
-                  "TIDAK_ADA_TEMUAN"
+                    "TIDAK_ADA_TEMUAN"
                     ? "Inspeksi tanpa temuan wajib memiliki foto bukti inspeksi dan sosialisasi."
                     : "Setiap grup temuan yang dipilih wajib memiliki deskripsi, foto, dan status OPEN/CLOSE."}
                 </span>
@@ -2990,8 +2997,8 @@ useEffect(() => {
                   ? "Menyimpan..."
                   : f.hasil_inspeksi ===
                     "TIDAK_ADA_TEMUAN"
-                  ? "Simpan Inspeksi"
-                  : "Simpan Temuan"}
+                    ? "Simpan Inspeksi"
+                    : "Simpan Temuan"}
 
               </button>
 
@@ -3145,7 +3152,7 @@ useEffect(() => {
         .logo img {
           display: block;
           width: 100%;
-          max-width: 110px;
+          max-width: 82px;
           height: auto;
           object-fit: contain;
         }
@@ -3295,6 +3302,30 @@ useEffect(() => {
           font-weight: 600;
         }
 
+.profile-info small.profile-role-admin-developer {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: fit-content !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  background: #ffd21f !important;
+  color: #6b5200 !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  box-shadow: 0 0 8px rgba(255, 210, 31, 0.75) !important;
+}
+
+.role-active-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #087f3f;
+  box-shadow: 0 0 5px rgba(8, 127, 63, 0.65);
+}
+
         .profile-chevron {
           margin-left: 2px;
           color: #7c8981;
@@ -3428,25 +3459,36 @@ useEffect(() => {
           font-weight: 600 !important;
         }
 
+        .role-badge.profile-role-admin-developer {
+  background: #ffd21f !important;
+  color: #6b5200 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 8px rgba(255, 210, 31, 0.75) !important;
+}
+
         .popup-logout,
-        .profile-logout {
-          width: 100%;
-          min-height: 39px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          border: 1px solid #f0d2d2;
-          border-radius: 10px;
-          background: #fff8f8;
-          color: #b42e2e;
-          font-family: "Poppins", sans-serif;
-          font-size: 11px;
-          font-weight: 600;
-          transition:
-            background .16s ease,
-            border-color .16s ease;
-        }
+.profile-logout {
+  width: 100%;
+  min-height: 39px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #f0d2d2;
+  border-radius: 10px;
+  background: #fff8f8;
+  color: #b42e2e;
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  transition:
+    background .16s ease,
+    border-color .16s ease;
+}
+
+.profile-logout {
+  display: none;
+}
 
         .popup-logout:hover,
         .profile-logout:hover {
@@ -5359,7 +5401,7 @@ useEffect(() => {
   .logo img {
     display: block !important;
     width: 100% !important;
-    max-width: 110px !important;
+    max-width: 82px !important;
     height: auto !important;
 
     object-fit: contain !important;

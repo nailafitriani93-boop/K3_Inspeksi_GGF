@@ -145,38 +145,38 @@ function getGroupName(row) {
 function getGroupTotal(row) {
   return Number(
     row?.jumlah ??
-      row?.jumlah_temuan ??
-      row?.total ??
-      row?.count ??
-      0
+    row?.jumlah_temuan ??
+    row?.total ??
+    row?.count ??
+    0
   );
 }
 
 function getGroupOpen(row) {
   return Number(
     row?.open ??
-      row?.jumlah_open ??
-      row?.open_07_hari ??
-      row?.open_0_7_hari ??
-      0
+    row?.jumlah_open ??
+    row?.open_07_hari ??
+    row?.open_0_7_hari ??
+    0
   );
 }
 
 function getGroupClose(row) {
   return Number(
     row?.close ??
-      row?.jumlah_close ??
-      0
+    row?.jumlah_close ??
+    0
   );
 }
 
 function getGroupWarning(row) {
   return Number(
     row?.warning ??
-      row?.jumlah_warning ??
-      row?.overdue ??
-      row?.terlambat ??
-      0
+    row?.jumlah_warning ??
+    row?.overdue ??
+    row?.terlambat ??
+    0
   );
 }
 
@@ -579,7 +579,7 @@ export default function Dashboard() {
 
   const profileRef = useRef(null);
 
-   useEffect(() => {
+  useEffect(() => {
     let dismissTimer;
 
     function showAccessNotice() {
@@ -792,7 +792,7 @@ export default function Dashboard() {
         if (!response.ok) {
           throw new Error(
             data?.error ||
-              "Gagal memuat master wilayah."
+            "Gagal memuat master wilayah."
           );
         }
 
@@ -886,24 +886,19 @@ export default function Dashboard() {
       const q = queryString(filters);
 
       const urls = [
-        `/api/dashboard/summary${
-          q ? `?${q}` : ""
+        `/api/dashboard/summary${q ? `?${q}` : ""
         }`,
 
-        `/api/dashboard/monthly${
-          q ? `?${q}` : ""
+        `/api/dashboard/monthly${q ? `?${q}` : ""
         }`,
 
-        `/api/dashboard/by-group${
-          q ? `?${q}` : ""
+        `/api/dashboard/by-group${q ? `?${q}` : ""
         }`,
 
-        `/api/dashboard/by-wilayah${
-          q ? `?${q}` : ""
+        `/api/dashboard/by-wilayah${q ? `?${q}` : ""
         }`,
 
-        `/api/dashboard/oldest-open?limit=25${
-          q ? `&${q}` : ""
+        `/api/dashboard/oldest-open?limit=25${q ? `&${q}` : ""
         }`,
       ];
 
@@ -930,7 +925,7 @@ export default function Dashboard() {
           if (!response.ok) {
             throw new Error(
               data?.error ||
-                "Gagal memuat dashboard."
+              "Gagal memuat dashboard."
             );
           }
 
@@ -969,23 +964,23 @@ export default function Dashboard() {
       setOpenList(
         Array.isArray(values[4])
           ? [...values[4]].sort((a, b) => {
-              const dateA = new Date(
-                a?.tanggal_temuan || 0
-              ).getTime();
+            const dateA = new Date(
+              a?.tanggal_temuan || 0
+            ).getTime();
 
-              const dateB = new Date(
-                b?.tanggal_temuan || 0
-              ).getTime();
+            const dateB = new Date(
+              b?.tanggal_temuan || 0
+            ).getTime();
 
-              if (dateB !== dateA) {
-                return dateB - dateA;
-              }
+            if (dateB !== dateA) {
+              return dateB - dateA;
+            }
 
-              return (
-                Number(b?.id_temuan || 0) -
-                Number(a?.id_temuan || 0)
-              );
-            })
+            return (
+              Number(b?.id_temuan || 0) -
+              Number(a?.id_temuan || 0)
+            );
+          })
           : []
       );
     } catch (error) {
@@ -996,7 +991,7 @@ export default function Dashboard() {
 
       setErr(
         error?.message ||
-          "Gagal memuat dashboard."
+        "Gagal memuat dashboard."
       );
     } finally {
       setLoading(false);
@@ -1032,31 +1027,31 @@ export default function Dashboard() {
     load(currentFilters());
   }
 
- const pie = useMemo(() => {
-  const openTotal = Number(summary?.open || 0);
-  const overdue = Number(summary?.overdue || 0);
-  const close = Number(summary?.close || 0);
+  const pie = useMemo(() => {
+    const openTotal = Number(summary?.open || 0);
+    const overdue = Number(summary?.overdue || 0);
+    const close = Number(summary?.close || 0);
 
-  const openNormal = Math.max(
-    openTotal - overdue,
-    0
-  );
+    const openNormal = Math.max(
+      openTotal - overdue,
+      0
+    );
 
-  return [
-    {
-      name: "OPEN",
-      value: openNormal,
-    },
-    {
-      name: "CLOSE",
-      value: close,
-    },
-    {
-      name: "TERLAMBAT",
-      value: overdue,
-    },
-  ];
-}, [summary]);
+    return [
+      {
+        name: "OPEN",
+        value: openNormal,
+      },
+      {
+        name: "CLOSE",
+        value: close,
+      },
+      {
+        name: "TERLAMBAT",
+        value: overdue,
+      },
+    ];
+  }, [summary]);
 
   const sortedGroups = useMemo(() => {
     return [...groups]
@@ -1084,8 +1079,8 @@ export default function Dashboard() {
         row?.wilayah ||
         (
           row?.no_wilayah !== undefined &&
-          row?.no_wilayah !== null &&
-          String(row?.no_wilayah).trim() !== ""
+            row?.no_wilayah !== null &&
+            String(row?.no_wilayah).trim() !== ""
             ? `Wilayah ${row.no_wilayah}`
             : "-"
         )
@@ -1216,9 +1211,9 @@ export default function Dashboard() {
 
           existing.total =
             Number(
-              existing.total ?? 
-                existing.jumlah ??
-                0
+              existing.total ??
+              existing.jumlah ??
+              0
             );
 
           existing.jumlah =
@@ -1230,8 +1225,8 @@ export default function Dashboard() {
           existing.open =
             Number(
               existing.open ??
-                existing.jumlah_open ??
-                0
+              existing.jumlah_open ??
+              0
             );
 
           existing.jumlah_open =
@@ -1240,8 +1235,8 @@ export default function Dashboard() {
           existing.close =
             Number(
               existing.close ??
-                existing.jumlah_close ??
-                0
+              existing.jumlah_close ??
+              0
             );
 
           existing.jumlah_close =
@@ -1305,9 +1300,8 @@ export default function Dashboard() {
     }
 
     if (scope === "range") {
-      return `${from || "-"} - ${
-        to || "-"
-      }`;
+      return `${from || "-"} - ${to || "-"
+        }`;
     }
 
     return "Januari - Desember 2024";
@@ -1374,186 +1368,210 @@ export default function Dashboard() {
             </div>
           </Link>
 
-        <div className="brand-text">
+          <div className="brand-text">
 
-  <b>
-    Dashboard k3
-  </b>
+            <b>
+              Dashboard k3
+            </b>
 
-  <span>
-    Sistem Manajemen Informasi Estate PG1
-  </span>
+            <span>
+              Sistem Manajemen Informasi Estate PG1
+            </span>
 
-</div>
+          </div>
         </div>
 
-          <nav
-            className={`nav ${isLoggedIn ? "nav-authenticated" : "nav-public"} ${showMobileNav ? "mobile-nav-open" : ""}`}
-            aria-label="Navigasi utama"
-          >
-            {isLoggedIn ? (
-              <>
-                <Link href="/dashboard" className="nav-page active">
-                  Dashboard
-                </Link>
+        <nav
+          className={`nav ${isLoggedIn ? "nav-authenticated" : "nav-public"} ${showMobileNav ? "mobile-nav-open" : ""}`}
+          aria-label="Navigasi utama"
+        >
+          {isLoggedIn ? (
+            <>
+              <Link href="/dashboard" className="nav-page active">
+                Dashboard
+              </Link>
 
-                <Link href="/temuan" className="nav-page">
-                  Data Temuan
-                </Link>
+              <Link href="/temuan" className="nav-page">
+                Data Temuan
+              </Link>
 
-                <Link href="/inspeksi" className="nav-page">
-                  Form Inspeksi
-                </Link>
+              <Link href="/inspeksi" className="nav-page">
+                Form Inspeksi
+              </Link>
 
-                <div className="profile-wrapper" ref={profileRef}>
-                  <button
-                    type="button"
-                    className={`profile-button ${profileOpen ? "profile-button-open" : ""}`}
-                    onClick={() => setProfileOpen((value) => !value)}
-                    aria-expanded={profileOpen}
-                  >
-                    <span className="profile-avatar">
-                      <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="12" cy="8" r="3.2" fill="currentColor" />
-                        <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
-                      </svg>
-                    </span>
-
-                    <span className="profile-info">
-                      <strong>{fullName}</strong>
-                      <small>{role}</small>
-                    </span>
-
-                    <span className="profile-chevron">▴</span>
-                  </button>
-
-                  {profileOpen && (
-                    <div className="profile-popup">
-                      <div className="profile-popup-header">
-                        <div className="profile-avatar">
-                          <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="12" cy="8" r="3.2" fill="currentColor" />
-                            <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
-                          </svg>
-                        </div>
-
-                        <div className="profile-header-info">
-                          <strong>{fullName}</strong>
-                          <span>{role}</span>
-                        </div>
-                      </div>
-
-                      <div className="profile-divider" />
-
-                      <div className="profile-detail">
-                        <span className="profile-label">Nama Lengkap</span>
-                        <strong>{fullName}</strong>
-                      </div>
-
-                      <div className="profile-detail">
-                        <span className="profile-label">Username</span>
-                        <strong>{user?.username || "-"}</strong>
-                      </div>
-
-                      <div className="profile-detail">
-                        <span className="profile-label">Role</span>
-                        <span className="role-badge">{role}</span>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="profile-logout"
-                        onClick={handleLogout}
-                        disabled={loggingOut}
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
-                        </svg>
-                        {loggingOut ? "Memproses..." : "Logout"}
-                      </button>
-
-                    </div>
-                  )}
-                </div>
-
+              <div className="profile-wrapper" ref={profileRef}>
                 <button
                   type="button"
-                  className="nav-logout"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
+                  className={`profile-button ${profileOpen ? "profile-button-open" : ""}`}
+                  onClick={() => setProfileOpen((value) => !value)}
+                  aria-expanded={profileOpen}
                 >
-                  <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
-                  </svg>
-                  <span className="nav-logout-label">{loggingOut ? "Memproses..." : "Logout"}</span>
+                  <span className="profile-avatar">
+                    <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+                      <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
+                    </svg>
+                  </span>
+
+                  <span className="profile-info">
+                    <strong>{fullName}</strong>
+
+                    <small
+                      className={
+                        roleCode === "ADMIN_DEVELOPER"
+                          ? "profile-role-admin-developer"
+                          : ""
+                      }
+                    >
+                      {roleCode === "ADMIN_DEVELOPER" && (
+                        <span className="role-active-dot" />
+                      )}
+
+                      {roleCode === "ADMIN_DEVELOPER"
+                        ? "ADMIN DEVELOPER"
+                        : role}
+                    </small>
+                  </span>
+
+                  <span className="profile-chevron">▴</span>
                 </button>
 
-                {canUsers && (
-                  <Link href="/users" className="nav-users-button" onClick={() => setProfileOpen(false)}>
-                    <span className="dashboard-add-finding-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none">
-                        <path
-                          d="M12 3.5 19 6v5.1c0 4.4-2.8 7.8-7 9.4-4.2-1.6-7-5-7-9.4V6l7-2.5Z"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="m8.7 12.2 2.1 2.1 4.5-4.6"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    Kelola User
-                  </Link>
-                )}
-              </>
-            ) : (
-              <Link href="/login?next=/dashboard" className="nav-login" aria-label="Login ke akun">
-                <span className="nav-login-avatar" aria-hidden="true">
-                  <svg
-                    className="nav-login-icon"
-                    viewBox="0 0 24 24"
-                    width="16"
-                    height="16"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M12 12.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Zm-6.5 7.3c.9-2.5 3.4-4 6.5-4s5.6 1.5 6.5 4"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <svg className="nav-login-door-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-                    <path d="M13 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                    <path d="M11 12h9m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <span className="nav-login-label">Login</span>
-              </Link>
-            )}
-          </nav>
+                {profileOpen && (
+                  <div className="profile-popup">
+                    <div className="profile-popup-header">
+                      <div className="profile-avatar">
+                        <svg className="profile-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                          <circle cx="12" cy="8" r="3.2" fill="currentColor" />
+                          <path d="M5.5 19.2c.8-3.2 3.1-5 6.5-5s5.7 1.8 6.5 5" fill="currentColor" />
+                        </svg>
+                      </div>
 
-          <div className="mobile-menu-wrapper">
-            <button
-              type="button"
-              className={`mobile-menu-button ${showMobileNav ? "mobile-menu-button-open" : ""}`}
-              onClick={() => setShowMobileNav((value) => !value)}
-              aria-label={showMobileNav ? "Tutup menu navigasi" : "Buka menu navigasi"}
-              aria-expanded={showMobileNav}
-            >
-              <span></span>
-              <span></span>
-              <span></span>
-            </button>
-          </div>
+                      <div className="profile-header-info">
+                        <strong>{fullName}</strong>
+                        <span>{role}</span>
+                      </div>
+                    </div>
+
+                    <div className="profile-divider" />
+
+                    <div className="profile-detail">
+                      <span className="profile-label">Nama Lengkap</span>
+                      <strong>{fullName}</strong>
+                    </div>
+
+                    <div className="profile-detail">
+                      <span className="profile-label">Username</span>
+                      <strong>{user?.username || "-"}</strong>
+                    </div>
+
+                    <div className="profile-detail">
+                      <span className="profile-label">Role</span>
+                      <span
+                        className={
+                          roleCode === "ADMIN_DEVELOPER"
+                            ? "role-badge profile-role-admin-developer"
+                            : "role-badge"
+                        }
+                      >
+                        {roleCode === "ADMIN_DEVELOPER"
+                          ? "ADMIN DEVELOPER"
+                          : role}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="profile-logout"
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
+                      </svg>
+                      {loggingOut ? "Memproses..." : "Logout"}
+                    </button>
+
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="nav-logout"
+                onClick={handleLogout}
+                disabled={loggingOut}
+              >
+                <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
+                </svg>
+                <span className="nav-logout-label">{loggingOut ? "Memproses..." : "Logout"}</span>
+              </button>
+
+              {canUsers && (
+                <Link href="/users" className="nav-users-button" onClick={() => setProfileOpen(false)}>
+                  <span className="dashboard-add-finding-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none">
+                      <path
+                        d="M12 3.5 19 6v5.1c0 4.4-2.8 7.8-7 9.4-4.2-1.6-7-5-7-9.4V6l7-2.5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="m8.7 12.2 2.1 2.1 4.5-4.6"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  Kelola User
+                </Link>
+              )}
+            </>
+          ) : (
+            <Link href="/login?next=/dashboard" className="nav-login" aria-label="Login ke akun">
+              <span className="nav-login-avatar" aria-hidden="true">
+                <svg
+                  className="nav-login-icon"
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 12.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Zm-6.5 7.3c.9-2.5 3.4-4 6.5-4s5.6 1.5 6.5 4"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <svg className="nav-login-door-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                  <path d="M13 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M11 12h9m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span className="nav-login-label">Login</span>
+            </Link>
+          )}
+        </nav>
+
+        <div className="mobile-menu-wrapper">
+          <button
+            type="button"
+            className={`mobile-menu-button ${showMobileNav ? "mobile-menu-button-open" : ""}`}
+            onClick={() => setShowMobileNav((value) => !value)}
+            aria-label={showMobileNav ? "Tutup menu navigasi" : "Buka menu navigasi"}
+            aria-expanded={showMobileNav}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
 
       </header>
 
@@ -1599,29 +1617,29 @@ export default function Dashboard() {
               Tampilan Periode
             </label>
 
-<CustomDropdown
-  value={scope}
-  onChange={setScope}
-  placeholder="Semua Data"
-  options={[
-    {
-      value: "all",
-      label: "Semua Data",
-    },
-    {
-      value: "day",
-      label: "1 Hari",
-    },
-    {
-      value: "month",
-      label: "Bulanan",
-    },
-    {
-      value: "range",
-      label: "Jangka Waktu",
-    },
-  ]}
-/>
+            <CustomDropdown
+              value={scope}
+              onChange={setScope}
+              placeholder="Semua Data"
+              options={[
+                {
+                  value: "all",
+                  label: "Semua Data",
+                },
+                {
+                  value: "day",
+                  label: "1 Hari",
+                },
+                {
+                  value: "month",
+                  label: "Bulanan",
+                },
+                {
+                  value: "range",
+                  label: "Jangka Waktu",
+                },
+              ]}
+            />
 
           </div>
 
@@ -1655,7 +1673,7 @@ export default function Dashboard() {
 
               <input
                 type="month"
-                  lang="id-ID"
+                lang="id-ID"
                 value={month}
                 onChange={(e) =>
                   setMonth(
@@ -1718,40 +1736,40 @@ export default function Dashboard() {
             </label>
 
             <CustomDropdown
-  value={noWilayah}
-  onChange={setNoWilayah}
-  placeholder="Semua Wilayah"
-  options={[
-    {
-      value: "",
-      label: "Semua Wilayah",
-    },
+              value={noWilayah}
+              onChange={setNoWilayah}
+              placeholder="Semua Wilayah"
+              options={[
+                {
+                  value: "",
+                  label: "Semua Wilayah",
+                },
 
-    ...masterWilayah.map(
-      (item, index) => {
-        const value =
-          item?.no_wilayah ??
-          item?.id_wilayah ??
-          item?.id ??
-          "";
+                ...masterWilayah.map(
+                  (item, index) => {
+                    const value =
+                      item?.no_wilayah ??
+                      item?.id_wilayah ??
+                      item?.id ??
+                      "";
 
-        const label =
-          item?.nama_wilayah ||
-          item?.nama ||
-          item?.label ||
-          (value
-            ? `Wilayah ${value}`
-            : "Wilayah");
+                    const label =
+                      item?.nama_wilayah ||
+                      item?.nama ||
+                      item?.label ||
+                      (value
+                        ? `Wilayah ${value}`
+                        : "Wilayah");
 
-        return {
-          value,
-          label,
-          key: `${value}-${index}`,
-        };
-      }
-    ),
-  ]}
-/>
+                    return {
+                      value,
+                      label,
+                      key: `${value}-${index}`,
+                    };
+                  }
+                ),
+              ]}
+            />
 
           </div>
 
@@ -1773,16 +1791,16 @@ export default function Dashboard() {
                 : "Terapkan"}
             </button>
 
-           <button
-  type="button"
-  className="k3d-refresh-button"
-  onClick={refreshData}
-  disabled={loading}
-  title="Refresh Data"
-  aria-label="Refresh Data"
->
-  <RefreshIcon />
-</button>
+            <button
+              type="button"
+              className="k3d-refresh-button"
+              onClick={refreshData}
+              disabled={loading}
+              title="Refresh Data"
+              aria-label="Refresh Data"
+            >
+              <RefreshIcon />
+            </button>
 
           </div>
 
@@ -2200,17 +2218,17 @@ export default function Dashboard() {
 
               </div>
 
-             <div className="k3d-chart-legend">
-  <span>
-    <i className="k3d-chart-orange" />
-    Open
-  </span>
+              <div className="k3d-chart-legend">
+                <span>
+                  <i className="k3d-chart-orange" />
+                  Open
+                </span>
 
-  <span>
-    <i className="k3d-chart-green" />
-    Close
-  </span>
-</div>
+                <span>
+                  <i className="k3d-chart-green" />
+                  Close
+                </span>
+              </div>
             </div>
 
             <div className="k3d-chart-large">
@@ -2223,120 +2241,120 @@ export default function Dashboard() {
 
           <article className="k3d-panel k3d-wilayah-panel">
 
-  <div className="k3d-wilayah-heading-row">
+            <div className="k3d-wilayah-heading-row">
 
-    <div className="k3d-panel-heading">
+              <div className="k3d-panel-heading">
 
-      <h2>
-        Temuan Per Wilayah
-      </h2>
+                <h2>
+                  Temuan Per Wilayah
+                </h2>
 
-      <p>
-        Perbandingan temuan pada seluruh wilayah kerja
-      </p>
+                <p>
+                  Perbandingan temuan pada seluruh wilayah kerja
+                </p>
 
-    </div>
+              </div>
 
-    <div className="k3d-wilayah-legend">
+              <div className="k3d-wilayah-legend">
 
-      <span>
-        <i className="k3d-chart-orange" />
-        Open
-      </span>
+                <span>
+                  <i className="k3d-chart-orange" />
+                  Open
+                </span>
 
-      <span>
-        <i className="k3d-chart-green" />
-        Close
-      </span>
+                <span>
+                  <i className="k3d-chart-green" />
+                  Close
+                </span>
 
-    </div>
+              </div>
 
-  </div>
+            </div>
 
-  <div className="k3d-wilayah-chart-wrapper">
+            <div className="k3d-wilayah-chart-wrapper">
 
-    <WilayahBar
-      data={wilayahDisplay}
-    />
+              <WilayahBar
+                data={wilayahDisplay}
+              />
 
-  </div>
+            </div>
 
- <div className="k3d-wilayah-summary-list">
+            <div className="k3d-wilayah-summary-list">
 
-  {wilayahDisplay
-    .filter((item) => {
-      const namaWilayah =
-        getWilayahName(item);
+              {wilayahDisplay
+                .filter((item) => {
+                  const namaWilayah =
+                    getWilayahName(item);
 
-      return (
-        String(namaWilayah)
-          .trim()
-          .length > 0
-      );
-    })
-    .map((item, index) => {
+                  return (
+                    String(namaWilayah)
+                      .trim()
+                      .length > 0
+                  );
+                })
+                .map((item, index) => {
 
-      const namaWilayah =
-        getWilayahName(item);
+                  const namaWilayah =
+                    getWilayahName(item);
 
-      const totalWilayah =
-        Number(
-          item?.total ??
-            item?.jumlah ??
-            item?.jumlah_temuan ??
-            0
-        );
+                  const totalWilayah =
+                    Number(
+                      item?.total ??
+                      item?.jumlah ??
+                      item?.jumlah_temuan ??
+                      0
+                    );
 
-      const closeWilayah =
-        Number(
-          item?.close ??
-            item?.jumlah_close ??
-            0
-        );
+                  const closeWilayah =
+                    Number(
+                      item?.close ??
+                      item?.jumlah_close ??
+                      0
+                    );
 
-      const closeRate =
-        totalWilayah > 0
-          ? (closeWilayah /
-              totalWilayah) *
-            100
-          : 0;
+                  const closeRate =
+                    totalWilayah > 0
+                      ? (closeWilayah /
+                        totalWilayah) *
+                      100
+                      : 0;
 
-     const warnaTitik = "green";
-      return (
-        <div
-          key={`${String(
-            namaWilayah
-          ).toLowerCase()}-${index}`}
-          className="k3d-wilayah-summary-item"
-        >
+                  const warnaTitik = "green";
+                  return (
+                    <div
+                      key={`${String(
+                        namaWilayah
+                      ).toLowerCase()}-${index}`}
+                      className="k3d-wilayah-summary-item"
+                    >
 
-          <div className="k3d-wilayah-summary-name">
+                      <div className="k3d-wilayah-summary-name">
 
-            <i
-              className={
-                warnaTitik === "orange"
-                  ? "k3d-wilayah-dot-orange"
-                  : "k3d-wilayah-dot-green"
-              }
-            />
+                        <i
+                          className={
+                            warnaTitik === "orange"
+                              ? "k3d-wilayah-dot-orange"
+                              : "k3d-wilayah-dot-green"
+                          }
+                        />
 
-            <span>
-              {namaWilayah}
-            </span>
+                        <span>
+                          {namaWilayah}
+                        </span>
 
-          </div>
+                      </div>
 
-          <strong>
-            {formatPercent(closeRate)}
-          </strong>
+                      <strong>
+                        {formatPercent(closeRate)}
+                      </strong>
 
-        </div>
-      );
-    }
-  )}
+                    </div>
+                  );
+                }
+                )}
 
-</div>
-</article>
+            </div>
+          </article>
         </section>
 
         <section className="k3d-panel k3d-open-panel">
@@ -2412,8 +2430,8 @@ export default function Dashboard() {
                             color: row?.overdue
                               ? "#111111"
                               : String(row?.status_temuan || "").toUpperCase() === "CLOSE"
-                              ? "#176b3a"
-                              : "#f2c300",
+                                ? "#176b3a"
+                                : "#f2c300",
                           }}
                           onClick={() => setSelectedOpen(row)}
                           title="Lihat detail temuan"
@@ -2447,7 +2465,7 @@ export default function Dashboard() {
                       <td>
                         {String(
                           row.tanggal_temuan ||
-                            ""
+                          ""
                         ).slice(
                           0,
                           10
@@ -2486,22 +2504,22 @@ export default function Dashboard() {
 
                       <td className="k3d-detail-desktop">
 
-                       <button
-  type="button"
-  className="k3d-eye-button"
-  style={{
-    color: row?.overdue
-      ? "#111111"
-      : String(row?.status_temuan || "").toUpperCase() === "CLOSE"
-      ? "#176b3a"
-      : "#f2c300",
-  }}
-  onClick={() =>
-    setSelectedOpen(row)
-  }
-  title="Lihat detail temuan"
-  aria-label="Lihat detail temuan"
->
+                        <button
+                          type="button"
+                          className="k3d-eye-button"
+                          style={{
+                            color: row?.overdue
+                              ? "#111111"
+                              : String(row?.status_temuan || "").toUpperCase() === "CLOSE"
+                                ? "#176b3a"
+                                : "#f2c300",
+                          }}
+                          onClick={() =>
+                            setSelectedOpen(row)
+                          }
+                          title="Lihat detail temuan"
+                          aria-label="Lihat detail temuan"
+                        >
 
                           <svg
                             width="18"
@@ -2625,7 +2643,7 @@ export default function Dashboard() {
                     <strong>
                       {String(
                         selectedOpen.tanggal_temuan ||
-                          ""
+                        ""
                       ).slice(
                         0,
                         10
@@ -2710,7 +2728,7 @@ export default function Dashboard() {
                     <strong>
                       {Number(
                         selectedOpen.umur_hari ||
-                          0
+                        0
                       )}{" "}
                       hari
                     </strong>
@@ -3234,6 +3252,32 @@ export default function Dashboard() {
           white-space: nowrap;
         }
 
+.k3d-dashboard .profile-info small.profile-role-admin-developer {
+  display: inline-block !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  background: #ffd21f !important;
+  color: #6b5200 !important;
+  font-family: "Poppins", sans-serif !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.3px !important;
+  white-space: nowrap !important;
+  box-shadow: 0 0 8px rgba(255, 210, 31, 0.75) !important;
+}
+
+.k3d-dashboard .role-active-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #087f3f;
+  box-shadow: 0 0 5px rgba(8, 127, 63, 0.65);
+  vertical-align: middle;
+}
+
         .k3d-dashboard .profile-chevron {
           display: flex;
           align-items: center;
@@ -3432,6 +3476,13 @@ export default function Dashboard() {
   font-family: "Poppins", sans-serif;
   font-size: 9px;
   font-weight: 600;
+}
+
+.k3d-dashboard .role-badge.profile-role-admin-developer {
+  background: #ffd21f !important;
+  color: #6b5200 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 8px rgba(255, 210, 31, 0.75) !important;
 }
 
 .k3d-dashboard .popup-logout {
