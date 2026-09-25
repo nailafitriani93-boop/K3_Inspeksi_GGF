@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutConfirmModal from "@/components/LogoutConfirmModal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -570,6 +571,8 @@ export default function Dashboard() {
 
   const [loggingOut, setLoggingOut] =
     useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] =
+    useState(false);
 
   const [showMobileNav, setShowMobileNav] =
     useState(false);
@@ -645,9 +648,9 @@ export default function Dashboard() {
       setUser(null);
       setProfileOpen(false);
       setLoggingOut(false);
+      setShowLogoutConfirm(false);
     }
   }
-
   useEffect(() => {
     let active = true;
     fetch("/api/auth/me", {
@@ -1481,7 +1484,7 @@ export default function Dashboard() {
                     <button
                       type="button"
                       className="profile-logout"
-                      onClick={handleLogout}
+                      onClick={() => setShowLogoutConfirm(true)}
                       disabled={loggingOut}
                     >
                       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1497,7 +1500,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 className="nav-logout"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutConfirm(true)}
                 disabled={loggingOut}
               >
                 <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -5767,6 +5770,13 @@ export default function Dashboard() {
           }
         }
       `}</style>
+
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        loading={loggingOut}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+      />
 
     </main>
   );

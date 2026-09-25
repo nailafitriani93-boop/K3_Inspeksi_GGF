@@ -4,6 +4,7 @@
 
 "use client";
 
+import LogoutConfirmModal from "@/components/LogoutConfirmModal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -30,6 +31,12 @@ const CLOSE_ALLOWED_ROLES = [
   "ADMIN_INSPEKSI",
   "INSPECTOR",
 ];
+
+const DELETE_ALLOWED_USERS = [
+  "100001",
+  "100002",
+];
+
 const GRUP_TEMUAN = [
   "Semua Grup",
   "APD",
@@ -212,11 +219,16 @@ export default function DataTemuanPage() {
 
   const [selectedTemuan, setSelectedTemuan] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [closeOpen, setCloseOpen] = useState(false);
   const [closeLoading, setCloseLoading] = useState(false);
   const [closeError, setCloseError] = useState("");
   const [closeSuccess, setCloseSuccess] = useState("");
+
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
 
   const [keteranganClose, setKeteranganClose] = useState("");
   const [fotoClose, setFotoClose] = useState("");
@@ -231,6 +243,7 @@ export default function DataTemuanPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const profileRef = useRef(null);
 
   // ============================================================
@@ -796,6 +809,86 @@ export default function DataTemuanPage() {
     }
   }
 
+  function hapusTemuan(item) {
+    if (!item?.id_temuan) {
+      return;
+    }
+
+    const currentUserId = String(
+      currentUser?.username || ""
+    ).trim();
+
+    if (!DELETE_ALLOWED_USERS.includes(currentUserId)) {
+      alert("Anda tidak memiliki akses untuk menghapus data temuan.");
+      return;
+    }
+
+    setDeleteTarget(item);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function konfirmasiHapusTemuan() {
+    if (!deleteTarget?.id_temuan) {
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+
+      const response = await fetch(
+        "/api/temuan/delete",
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id_temuan: deleteTarget.id_temuan,
+          }),
+        }
+      );
+
+      const responseText = await response.text();
+
+      let result = {};
+
+      if (responseText.trim()) {
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          result = {
+            error: responseText,
+          };
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+          "Gagal menghapus data temuan."
+        );
+      }
+
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+
+      await loadData();
+
+    } catch (err) {
+      console.error(
+        "ERROR HAPUS TEMUAN:",
+        err
+      );
+
+      alert(
+        err?.message ||
+        "Gagal menghapus data temuan."
+      );
+
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
   // ============================================================
   // LOGOUT
   // ============================================================
@@ -844,10 +937,19 @@ export default function DataTemuanPage() {
   const roleCode = String(currentUser?.role || "")
     .trim()
     .toUpperCase();
+
+  const canDeleteTemuan =
+    DELETE_ALLOWED_USERS.includes(
+      String(currentUser?.username || "").trim()
+    );
+
   const canUsers =
     roleCode === "ADMIN_DEVELOPER" ||
     Boolean(currentUser?.kelola_user);
 
+  const currentUserId = String(
+    currentUser?.username || ""
+  ).trim();
   return (
     <>
       <style jsx global>{`
@@ -1745,7 +1847,110 @@ export default function DataTemuanPage() {
           cursor: pointer;
         }
 
-        .icon-btn:hover {
+     .delete-btn {
+  color: #dc2626;
+}
+
+.delete-btn:hover {
+  color: #ffffff;
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.delete-modal {
+  width: 360px;
+  max-width: calc(100vw - 40px);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 26px 26px 22px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+}
+
+.delete-modal-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.delete-modal-icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.delete-modal h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.delete-modal p {
+  margin: 9px 0 22px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.delete-modal-actions button {
+  flex: 1;
+  height: 40px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.delete-modal-no {
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.delete-modal-no:hover {
+  background: #f9fafb;
+}
+
+.delete-modal-yes {
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+}
+
+.delete-modal-yes:hover {
+  background: #b91c1c;
+}
+
+.delete-modal-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.icon-btn:hover {
           background: #f2faf4;
           color: #07833f;
           border-color: #b9d9c3;
@@ -3418,7 +3623,49 @@ export default function DataTemuanPage() {
             font-weight: 600 !important;
             line-height: 1.2 !important;
           }
-        }
+          }
+
+.delete-success-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000000;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 280px;
+  padding: 13px 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #16a34a;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.delete-success-check {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcfce7;
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.delete-success-toast strong {
+  display: block;
+  font-size: 13px;
+  color: #166534;
+}
+
+.delete-success-toast span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+}
       `}</style>
 
       <main className="temuan-page">
@@ -3597,9 +3844,10 @@ export default function DataTemuanPage() {
                   <button
                     type="button"
                     className="profile-logout"
-                    onClick={
-                      handleLogout
-                    }
+                    onClick={() => {
+                      setProfileOpen(false);
+                      setShowLogoutConfirm(true);
+                    }}
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -3622,7 +3870,7 @@ export default function DataTemuanPage() {
             <button
               type="button"
               className="nav-logout"
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
             >
               <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5v-2H5V6h5V4Zm5.59 4.59L14.17 10H21v2h-6.83l1.42 1.41L14.17 14l-3.41-3.41L14.17 7l1.42 1.59Z" fill="currentColor" />
@@ -4066,6 +4314,7 @@ export default function DataTemuanPage() {
                                 </td>
 
                                 <td className="col-action mobile-leading-action">
+                                  {/* DETAIL */}
                                   <button
                                     type="button"
                                     className={`icon-btn ${detailButtonClass}`}
@@ -4073,12 +4322,63 @@ export default function DataTemuanPage() {
                                     onClick={() => lihatDetail(item)}
                                   >
                                     <svg viewBox="0 0 24 24">
-                                      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" fill="none" stroke="currentColor" strokeWidth="2" />
-                                      <circle cx="12" cy="12" r="2.7" fill="currentColor" />
+                                      <path
+                                        d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                      />
+                                      <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="2.7"
+                                        fill="currentColor"
+                                      />
                                     </svg>
                                   </button>
-                                </td>
 
+                                  {/* HAPUS - HANYA USER 100001 & 100002 */}
+                                  {DELETE_ALLOWED_USERS.includes(
+                                    String(currentUser?.username || "").trim()
+                                  ) && (
+                                      <button
+                                        type="button"
+                                        className="icon-btn delete-btn"
+                                        title="Hapus Data"
+                                        onClick={() => hapusTemuan(item)}
+                                      >
+                                        <svg
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          aria-hidden="true"
+                                        >
+                                          <path
+                                            d="M4 7h16"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                          />
+                                          <path
+                                            d="M9 7V5.5C9 4.67 9.67 4 10.5 4h3c.83 0 1.5.67 1.5 1.5V7"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                          />
+                                          <path
+                                            d="M7 7l.8 13h8.4L17 7"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinejoin="round"
+                                          />
+                                          <path
+                                            d="M10 11v5.5M14 11v5.5"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                          />
+                                        </svg>
+                                      </button>
+                                    )}
+                                </td>
                                 <td>
                                   {formatTanggal(
                                     item.tanggal_temuan
@@ -4161,6 +4461,52 @@ export default function DataTemuanPage() {
                                         />
                                       </svg>
                                     </button>
+
+                                    {/* HAPUS - KHUSUS USER 100001 / 100002 */}
+
+                                    {canDeleteTemuan && (
+                                      <button
+                                        type="button"
+                                        className="icon-btn delete-btn"
+                                        title="Hapus Data"
+                                        onClick={() =>
+                                          hapusTemuan(item)
+                                        }
+                                      >
+                                        <svg
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                        >
+                                          <path
+                                            d="M4 7h16"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                          />
+
+                                          <path
+                                            d="M9 7V5.5C9 4.7 9.7 4 10.5 4h3c.8 0 1.5.7 1.5 1.5V7"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                          />
+
+                                          <path
+                                            d="M7 7l.8 13h8.4L17 7"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinejoin="round"
+                                          />
+
+                                          <path
+                                            d="M10 11v5.5M14 11v5.5"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                          />
+                                        </svg>
+                                      </button>
+                                    )}
+
 
                                     {/* TINDAK LANJUT */}
 
@@ -4853,6 +5199,80 @@ export default function DataTemuanPage() {
         </div>
 
       </main>
+      {deleteConfirmOpen && deleteTarget && (
+        <div className="delete-modal-overlay">
+          <div className="delete-modal">
+            <div className="delete-modal-icon">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 8v4"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="12"
+                  cy="16"
+                  r="1"
+                  fill="currentColor"
+                />
+                <path
+                  d="M10.3 4.5 2.9 17.2A2 2 0 0 0 4.6 20h14.8a2 2 0 0 0 1.7-2.8L13.7 4.5a2 2 0 0 0-3.4 0Z"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                />
+              </svg>
+            </div>
+
+            <h3>Hapus Temuan?</h3>
+
+            <p>
+              Apakah Anda yakin ingin menghapus temuan ini?
+            </p>
+
+            <div className="delete-modal-actions">
+              <button
+                type="button"
+                className="delete-modal-no"
+                onClick={() => {
+                  setDeleteConfirmOpen(false);
+                  setDeleteTarget(null);
+                }}
+                disabled={deleteLoading}
+              >
+                Tidak
+              </button>
+
+              <button
+                type="button"
+                className="delete-modal-yes"
+                onClick={konfirmasiHapusTemuan}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteSuccess && (
+        <div className="delete-success-toast">
+          <div className="delete-success-check">
+            ✓
+          </div>
+
+          <div>
+            <strong>Berhasil</strong>
+            <span>Temuan berhasil dihapus.</span>
+          </div>
+        </div>
+      )}
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+      />
     </>
   );
 }

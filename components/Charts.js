@@ -91,25 +91,25 @@ function normalizeWilayahName(value) {
 export function StatusPie({ data = [] }) {
   const safeData = Array.isArray(data)
     ? data
-        .map((item) => ({
-          ...item,
+      .map((item) => ({
+        ...item,
 
-          name:
-            item?.name ||
-            item?.label ||
-            item?.status ||
-            "-",
+        name:
+          item?.name ||
+          item?.label ||
+          item?.status ||
+          "-",
 
-          value: toNumber(
-            item?.value ??
-              item?.jumlah ??
-              item?.total ??
-              0
-          ),
-        }))
-        .filter(
-          (item) => item.value > 0
-        )
+        value: toNumber(
+          item?.value ??
+          item?.jumlah ??
+          item?.total ??
+          0
+        ),
+      }))
+      .filter(
+        (item) => item.value > 0
+      )
     : [];
 
   const total = safeData.reduce(
@@ -123,19 +123,19 @@ export function StatusPie({ data = [] }) {
     TERLAMBAT: "#4b5358",
   };
 
- const chartData = safeData.length
-  ? safeData.map((item) => ({
+  const chartData = safeData.length
+    ? safeData.map((item) => ({
       ...item,
       chartTotal: total,
     }))
-  : [
+    : [
       {
         name: "Tidak Ada Data",
         value: 1,
         chartTotal: 1,
       },
     ];
-    
+
   return (
     <div
       className="pie-chart-wrapper"
@@ -172,8 +172,8 @@ export function StatusPie({ data = [] }) {
                   fill={
                     safeData.length
                       ? STATUS_COLORS[
-                          String(item.name).toUpperCase()
-                        ] || "#4b5358"
+                      String(item.name).toUpperCase()
+                      ] || "#4b5358"
                       : "#e5e9e5"
                   }
                 />
@@ -182,15 +182,15 @@ export function StatusPie({ data = [] }) {
           </Pie>
 
           <Tooltip
-  content={<StatusTooltip />}
-  cursor={false}
-  wrapperStyle={{
-    outline: "none",
-    zIndex: 20,
-    maxWidth:
-      "calc(100vw - 20px)",
-  }}
-/>
+            content={<StatusTooltip />}
+            cursor={false}
+            wrapperStyle={{
+              outline: "none",
+              zIndex: 20,
+              maxWidth:
+                "calc(100vw - 20px)",
+            }}
+          />
         </PieChart>
       </ResponsiveContainer>
 
@@ -242,14 +242,14 @@ function StatusTooltip({
 
   const value = toNumber(
     item?.value ??
-      item?.jumlah ??
-      item?.total ??
-      0
+    item?.jumlah ??
+    item?.total ??
+    0
   );
 
   const total = toNumber(
     payload[0]?.payload?.chartTotal ??
-      0
+    0
   );
 
   const percentage =
@@ -380,23 +380,23 @@ function MonthlyTooltip({
 
   const total = toNumber(
     row?.total ??
-      row?.jumlah ??
-      row?.jumlah_temuan ??
-      row?.count ??
-      0
+    row?.jumlah ??
+    row?.jumlah_temuan ??
+    row?.count ??
+    0
   );
 
   const open = toNumber(
     row?.open ??
-      row?.jumlah_open ??
-      row?.open_07_hari ??
-      0
+    row?.jumlah_open ??
+    row?.open_07_hari ??
+    0
   );
 
   const close = toNumber(
     row?.close ??
-      row?.jumlah_close ??
-      0
+    row?.jumlah_close ??
+    0
   );
 
   return (
@@ -471,23 +471,23 @@ export function MonthlyBar({ data = [] }) {
     (item, index) => {
       const total = toNumber(
         item?.total ??
-          item?.jumlah ??
-          item?.jumlah_temuan ??
-          item?.count ??
-          0
+        item?.jumlah ??
+        item?.jumlah_temuan ??
+        item?.count ??
+        0
       );
 
       const open = toNumber(
         item?.open ??
-          item?.jumlah_open ??
-          item?.open_07_hari ??
-          0
+        item?.jumlah_open ??
+        item?.open_07_hari ??
+        0
       );
 
       const close = toNumber(
         item?.close ??
-          item?.jumlah_close ??
-          0
+        item?.jumlah_close ??
+        0
       );
 
       /*
@@ -512,8 +512,8 @@ export function MonthlyBar({ data = [] }) {
 
       const labelClose =
         open <= 0 &&
-        close > 0 &&
-        total > 0
+          close > 0 &&
+          total > 0
           ? total
           : null;
 
@@ -548,22 +548,22 @@ export function MonthlyBar({ data = [] }) {
     normalized.length > 0
       ? normalized
       : Array.from(
-          { length: 12 },
-          (_, index) => ({
-            bulan:
-              getMonthName(index),
+        { length: 12 },
+        (_, index) => ({
+          bulan:
+            getMonthName(index),
 
-            total: 0,
+          total: 0,
 
-            open: 0,
+          open: 0,
 
-            close: 0,
+          close: 0,
 
-            labelOpen: null,
+          labelOpen: null,
 
-            labelClose: null,
-          })
-        );
+          labelClose: null,
+        })
+      );
 
   return (
     <div
@@ -750,7 +750,7 @@ export function WilayahBar({ data = [] }) {
         item?.wilayah ||
         (
           item?.no_wilayah !== undefined &&
-          item?.no_wilayah !== null
+            item?.no_wilayah !== null
             ? `Wilayah ${item.no_wilayah}`
             : `Wilayah ${index + 1}`
         );
@@ -778,26 +778,26 @@ export function WilayahBar({ data = [] }) {
       const total =
         toNumber(
           item?.total ??
-            item?.jumlah ??
-            item?.jumlah_temuan ??
-            item?.count ??
-            0
+          item?.jumlah ??
+          item?.jumlah_temuan ??
+          item?.count ??
+          0
         );
 
       const open =
         toNumber(
           item?.open ??
-            item?.jumlah_open ??
-            item?.open_07_hari ??
-            item?.open_0_7_hari ??
-            0
+          item?.jumlah_open ??
+          item?.open_07_hari ??
+          item?.open_0_7_hari ??
+          0
         );
 
       const close =
         toNumber(
           item?.close ??
-            item?.jumlah_close ??
-            0
+          item?.jumlah_close ??
+          0
         );
 
       if (!normalizedMap.has(key)) {
@@ -860,14 +860,14 @@ export function WilayahBar({ data = [] }) {
 
             labelOpen:
               existing.open > 0 &&
-              existing.total > 0
+                existing.total > 0
                 ? existing.total
                 : null,
 
             labelClose:
               existing.open <= 0 &&
-              existing.close > 0 &&
-              existing.total > 0
+                existing.close > 0 &&
+                existing.total > 0
                 ? existing.total
                 : null,
           };
@@ -918,26 +918,26 @@ export function WilayahBar({ data = [] }) {
     const total =
       toNumber(
         row?.total ??
-          row?.jumlah ??
-          row?.jumlah_temuan ??
-          row?.count ??
-          0
+        row?.jumlah ??
+        row?.jumlah_temuan ??
+        row?.count ??
+        0
       );
 
     const open =
       toNumber(
         row?.open ??
-          row?.jumlah_open ??
-          row?.open_07_hari ??
-          row?.open_0_7_hari ??
-          0
+        row?.jumlah_open ??
+        row?.open_07_hari ??
+        row?.open_0_7_hari ??
+        0
       );
 
     const close =
       toNumber(
         row?.close ??
-          row?.jumlah_close ??
-          0
+        row?.jumlah_close ??
+        0
       );
 
     return (

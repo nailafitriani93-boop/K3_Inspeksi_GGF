@@ -96,8 +96,8 @@ export default function SearchSelect({
       onChange(
         alreadySelected
           ? selectedValues.filter(
-              (selectedValue) => String(selectedValue) !== itemValue
-            )
+            (selectedValue) => String(selectedValue) !== itemValue
+          )
           : [...selectedValues, itemValue]
       );
 
@@ -123,9 +123,8 @@ export default function SearchSelect({
 
   return (
     <div
-      className={`search-select-wrapper ${
-        disabled ? "is-disabled" : ""
-      }`}
+      className={`search-select-wrapper ${disabled ? "is-disabled" : ""
+        }`}
       ref={wrapperRef}
     >
       {label && (
@@ -135,9 +134,8 @@ export default function SearchSelect({
       )}
 
       <div
-        className={`search-select-control ${
-          open ? "is-open" : ""
-        }`}
+        className={`search-select-control ${open ? "is-open" : ""
+          }`}
         onClick={handleOpen}
       >
         <input
@@ -174,9 +172,8 @@ export default function SearchSelect({
         ) : null}
 
         <span
-          className={`search-select-arrow ${
-            open ? "open" : ""
-          }`}
+          className={`search-select-arrow ${open ? "open" : ""
+            }`}
         />
       </div>
 
@@ -194,11 +191,10 @@ export default function SearchSelect({
                   <button
                     key={item[valueKey]}
                     type="button"
-                    className={`search-select-option ${
-                      isSelected
+                    className={`search-select-option ${isSelected
                         ? "selected"
                         : ""
-                    }`}
+                      }`}
                     onClick={() =>
                       handleSelect(item)
                     }

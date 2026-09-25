@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutConfirmModal from "@/components/LogoutConfirmModal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -39,6 +40,7 @@ export default function UsersPage() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const profileRef = useRef(null);
 
   const role = currentUser?.role || "-";
@@ -458,7 +460,7 @@ export default function UsersPage() {
           <button
             type="button"
             className="users-nav-logout"
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             disabled={loggingOut}
           >
             <span>
@@ -3171,6 +3173,13 @@ export default function UsersPage() {
           }
         }
       `}</style>
+
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        loading={loggingOut}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+      />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import LogoutConfirmModal from "@/components/LogoutConfirmModal";
 import Link from "next/link";
 import SearchSelect from "@/components/SearchSelect";
 
@@ -113,6 +114,7 @@ export default function Inspeksi() {
     useState(false);
 
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [currentUser, setCurrentUser] = useState({
     nama_lengkap: "",
     username: "",
@@ -179,14 +181,9 @@ export default function Inspeksi() {
   async function logout() {
     if (loggingOut) return;
 
-    const yakin = window.confirm(
-      "Apakah Anda yakin ingin keluar dari akun?"
-    );
-
-    if (!yakin) return;
-
     try {
       setLoggingOut(true);
+
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
@@ -1585,7 +1582,7 @@ export default function Inspeksi() {
                   className="profile-logout"
                   onClick={() => {
                     setShowProfile(false);
-                    logout();
+                    setShowLogoutConfirm(true);
                   }}
                   disabled={
                     loggingOut
@@ -1618,7 +1615,7 @@ export default function Inspeksi() {
           <button
             type="button"
             className="nav-logout"
-            onClick={logout}
+            onClick={() => setShowLogoutConfirm(true)}
             disabled={loggingOut}
           >
             <svg className="nav-logout-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -5828,6 +5825,13 @@ export default function Inspeksi() {
           }
         }
       `}</style>
+
+      <LogoutConfirmModal
+        open={showLogoutConfirm}
+        loading={loggingOut}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={logout}
+      />
 
     </main>
   );
